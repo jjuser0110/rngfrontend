@@ -1,0 +1,155 @@
+
+#content{
+    background: linear-gradient(359deg, #0b0b0b 50%, #252525);
+}
+
+#user-bank-wrapper{
+    margin: 10px auto 25px
+}
+
+#user-bank-wrapper .bank-wrapper{
+    margin: 0 5% 15px;
+    width: 90%;
+    position: relative;
+    filter: var(--container-shadow)
+}
+
+#user-bank-wrapper .bank-wrapper img{
+    width: 100%;
+}
+
+#user-bank-wrapper .bank-wrapper .bank-name{
+    position: absolute;
+    top: 25px;
+    left: 35px;
+}
+
+#user-bank-wrapper .bank-wrapper .bank-status{
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: fit-content;
+    padding: 5px 10px;
+    background: var(--clr-dark);
+    border-radius: 5px;
+}
+
+#user-bank-wrapper .bank-wrapper .bank-status span{
+    font-size: 12px;
+}
+
+#user-bank-wrapper .bank-wrapper .bank-status.disabled{
+    background: #9c0000;
+}
+
+#user-bank-wrapper .bank-wrapper .account-info{
+    position: absolute;
+    bottom: 25px;
+    left: 35px;
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+}
+
+#user-bank-wrapper .bank-wrapper .account-info span, #user-bank-wrapper .bank-wrapper .bank-name span{
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--clr-dark);
+    line-height: 1
+}
+
+#user-bank-wrapper .bank-wrapper .bank-name span{
+    font-size: 18px;
+    max-width: 65%
+}
+
+#user-bank-wrapper .bank-wrapper .info{
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: fit-content;
+}
+
+#user-bank-wrapper .bank-wrapper .info label{
+    font-size: 10px;
+    color: var(--clr-dark);
+    font-weight: 400;
+    line-height: 1
+}
+
+#btn-add-bank{
+    width: 80%;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    justify-content: center;
+    margin: 15px auto;
+}
+
+#bank-note{
+    font-size: 16px;
+    color: white;
+    text-align: center;
+    display: block;
+    margin: 15px 10px;
+    width: calc(100% - 20px);
+    text-transform: uppercase;
+    display: none;
+}
+
+#bank-info{
+    margin-bottom: 25px;
+    padding: 0 10px;
+    color: white;
+    text-align: center;
+    font-size: 18px;
+
+}
+
+#modal-update-bank .content{
+    background: linear-gradient(180deg, #2a2a2a, #000000);
+}
+
+#modal-update-bank button{
+    margin-bottom: 10px;
+}
+
+#modal-update-bank .btn-delete{
+    background: red;
+    color: white;
+}
+
+#modal-update-bank .form-wrapper{
+    background: none;
+}
+
+.wrapper-header{
+    display: flex;
+    justify-content: space-between;
+    margin: 10px auto 25px;
+    width: 100%;
+    align-items: center;
+}
+
+.wrapper-header .col{
+    flex: 0 0 10%;
+}
+
+.wrapper-header .col svg > *{
+    color: white;
+}
+
+.wrapper-header .col a{
+    display: flex;
+}
+
+.title{
+    flex: 0 0 80%;
+    font-size: 20px;
+    color: var(--clr-style-1);
+    font-weight: 700;
+    font-family: var(--font-secondary);
+    text-transform: uppercase;
+    text-align: center;
+}

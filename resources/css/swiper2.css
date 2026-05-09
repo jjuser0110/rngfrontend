@@ -1,0 +1,18 @@
+#hero-swiper{
+  filter: drop-shadow(var(--default-shadow));
+}
+
+.swiper-slide img{
+  width: 100%;
+  border-radius: 5px;
+}
+
+.swiper-slide{
+  display: flex;
+  padding:10px;
+
+}
+
+.hero-swiper img{
+  border-radius: 0;
+}

@@ -1,0 +1,200 @@
+.deposit-account{
+    background: var(--gradient-style-1);
+    padding: 3px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.deposit-account .content{
+    border-radius: 5px;
+}
+
+.deposit-account .row{
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    margin-bottom: 3px;
+    padding: 10px;
+    background: rgb(0 0 0 / 70%);
+}
+
+.deposit-account .row:first-of-type{
+    border-radius: 5px 5px 0 0;
+}
+
+.deposit-account .row:last-of-type{
+    margin-bottom: 0;
+    border-radius: 0 0 5px 5px;
+}
+
+.deposit-account .row label{
+    flex: 0 0 30%;
+    font-size: 15px;
+    font-weight: 600
+}
+
+.deposit-account .row .value{
+    font-size: 15px;
+    font-weight: 600
+}
+
+.deposit-account .row .copy{
+    font-size: 12px;
+    padding: 5px;
+    border-radius: 5px;
+    font-family: var(--font-scondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--clr-dark);
+    background: var(--gradient-style-1);
+}
+
+.deposit-account .row .copy-wrapper{
+    flex: 0 0 68%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.deposit-account .row .copy-content{
+    animation: btn-deposit 1s linear infinite;
+}
+
+#deposit-guide{
+    color: var(--clr-style-1);
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+#deposit-guide p{
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+#deposit-guide p span{
+    font-weight: 600;
+}
+
+.preset-amounts{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 5px;
+    padding: 5px;
+}
+
+.preset-amounts .preset-amount{
+    display: flex;
+    flex: 0 0 calc(20% - 5px);
+    background: var(--gradient-style-1);
+    color: var(--clr-dark);
+    border-radius: 5px;
+    padding: 3px;
+    box-sizing: border-box;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700
+}
+
+#payment-gateways{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+#payment-gateways button{
+    display: flex;
+    padding: 2px;
+    background: black;
+    position: relative;
+    filter: grayscale(1);
+    color: var(--clr-style-1);
+    border: 2px solid var(--clr-style-1);
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 calc(50% - 5px);
+    transition: 0.275s
+}
+
+#payment-gateways button.active{
+    filter: grayscale(0);
+    color: var(--clr-dark);
+    background: var(--gradient-style-1)
+}
+
+#payment-gateways button img{
+    height: 32px;
+    border-radius: 5px;
+}
+
+#payment-qrcodes{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+#payment-qrcodes button{
+    display: flex;
+    padding: 2px;
+    background: #9f9f9f;
+    position: relative;
+    filter: grayscale(1);
+    color: var(--clr-style-1);
+    border: 2px solid var(--clr-style-1);
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 calc(50% - 5px);
+    transition: 0.275s
+}
+
+#payment-qrcodes button.active{
+    filter: grayscale(0);
+    color: var(--clr-dark);
+    background: var(--gradient-style-1)
+}
+
+#payment-qrcodes button img{
+    height: 32px;
+    border-radius: 5px;
+}
+
+#qrcode-account img{
+    width: 80%;
+    margin: 15px 10%;
+}
+
+#qrcode-account .qrcode-name{
+    text-align: center;
+    color: white;
+    animation: btn-deposit 1s linear infinite;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 5px;
+    border: 2px solid;
+    padding: 5px 10px;
+    width: fit-content;
+    margin: 0 auto 15px;
+}
+
+#qrcode-account button{
+    width: 50%;
+    border-radius: 5px;
+    font-size: 16px;
+    padding: 5px 15px;
+    margin: 0 25% 15px;
+    font-weight: 700;
+    font-family: var(--font-secondary);
+    background: var(--gradient-style-2);
+    color: var(--clr-style-1);
+    border: 3px solid;
+}

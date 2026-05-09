@@ -1,0 +1,85 @@
+#livechat{
+    background: rgb(135 135 135 / 35%);
+    min-width: 300px;
+    min-height: 500px;
+    height: calc(100vh - 145px);
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 400;
+    padding: 10px;
+    overflow: hidden;
+}
+
+#livechat .msg{
+    display: flex;
+    flex-direction: column;
+    background: #0000008a;
+    padding: 8px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+#livechat .msg-user{
+    font-size: 14px;
+    font-weight:600;
+}
+
+#livechat .system-msg .msg-user{
+    color: #39ff39;
+}
+
+#livechat .agent-msg .msg-user{
+    color: yellow;
+}
+
+#livechat .client-msg .msg-user{
+    color: #66ccff;
+}
+
+#livechat .msg-content{
+    margin-top: 5px;
+}
+
+#livechat .msg-content, #livechat .msg-content *{
+    font-size: 14px;
+    line-height: 18px;
+}
+
+#livechat .msg-time{
+    padding-left: 3px;
+    font-size: 14px;
+    margin: -3px 0 2px;
+}
+
+.msg-wrapper{
+    height: calc( 100% - 50px);
+    overflow-y:auto;
+    overflow-x: hidden;
+    margin-bottom: 10px;
+}
+
+.chat-input{
+    display: flex;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.chat-input textarea{
+    background: white;
+    width: 100%;
+    color: black;
+    border: none;
+    border-radius: 100px;
+    padding: 8px 100px 6px 15px;
+    height:40px;
+}
+
+.chat-input .chat-action{
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 5px;
+    color: #977100;
+}
