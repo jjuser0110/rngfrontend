@@ -19,3 +19,8 @@ Route::post('/track-event', [App\Http\Controllers\WelcomeController::class, 'tra
 Route::group(['middleware' => ['auth:customer']], function () {
     Route::get('/myaccount', [App\Http\Controllers\WelcomeController::class, 'myaccount'])->name('myaccount');
 });
+
+use App\Http\Controllers\QuotationController;
+
+// Route for downloading the quotation
+Route::post('/quotation/download', [QuotationController::class, 'downloadQuotation'])->name('quotation.download');

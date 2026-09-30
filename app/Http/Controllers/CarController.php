@@ -17,7 +17,58 @@ class CarController extends Controller
 {
     public function index()
     {
-        return view('cars.index');
+        // Hardcoded car data
+        $cars = collect([
+            (object)[
+                'id' => 1,
+                'name' => 'Jeep Renegade',
+                'type' => 'SUV',
+                'seats' => 4,
+                'luggage' => 2,
+                'fuel' => 'Petrol',
+                'drive' => 'Automatic',
+                'daily_rate' => 265,
+                'image' => null
+            ],
+            (object)[
+                'id' => 2,
+                'name' => 'Mini Cooper',
+                'type' => 'Hatchback',
+                'seats' => 4,
+                'luggage' => 2,
+                'fuel' => 'Petrol',
+                'drive' => 'Automatic',
+                'daily_rate' => 244,
+                'image' => null
+            ],
+            (object)[
+                'id' => 3,
+                'name' => 'Mercedes C-Class',
+                'type' => 'Prestige',
+                'seats' => 5,
+                'luggage' => 3,
+                'fuel' => 'Diesel',
+                'drive' => 'Automatic',
+                'daily_rate' => 320,
+                'image' => null
+            ]
+        ]);
+
+        return view('cars.index', compact('cars'));
     }
 
+    public function cart()
+    {
+        return view('cars.cart');
+    }
+
+    public function fillinfo()
+    {
+        return view('cars.fillinfo');
+    }
+
+    public function finalreview()
+    {
+        return view('cars.finalreview');
+    }
 }
