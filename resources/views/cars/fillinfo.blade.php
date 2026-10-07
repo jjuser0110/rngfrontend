@@ -394,9 +394,9 @@
         <span class="text-uppercase fs-10 fw-bold tracking-wider d-block text-truncate" style="color: #6c757d;">Estimated Total</span>
         <div class="fw-bold fs-18 text-truncate" style="color: #33383c;">$2,247.20</div>
     </div>
-    <button type="submit" form="quotationForm" class="btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm text-decoration-none flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
-        <span>Confirm Detail</span> <i class="fa fa-paper-plane ms-1"></i>
-    </button>
+    <a href="{{ route('cars.finalreview') }}" class="btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm text-decoration-none flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
+        <span>Confirm Detail</span> <i class="fa fa-paper-plane"></i>
+    </a>
 </div>
 @endif
 
