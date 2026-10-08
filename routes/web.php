@@ -10,6 +10,8 @@ Route::post('/logout',  [LoginController::class,    'logout'])->name('logout');
 
 Route::get('/register',  [RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'register']);
+Route::post('/attachments/store', [App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.store');
+Route::delete('/attachments/{media}', [App\Http\Controllers\AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
 Route::get('/', [App\Http\Controllers\WelcomeController::class, 'welcome'])->name('welcome');
 Route::get('/aboutus', [App\Http\Controllers\WelcomeController::class, 'aboutus'])->name('aboutus');

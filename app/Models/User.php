@@ -28,6 +28,7 @@ class User extends Authenticatable
         'username',
         'role_id',
         'is_active',
+        'customer_id',
     ];
 
     /**

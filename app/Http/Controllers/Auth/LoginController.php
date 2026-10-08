@@ -23,14 +23,14 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required|string',
+            'email' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        $customer = Customer::where('username', $request->username)->first();
+        $customer = Customer::where('email', $request->email)->first();
 
         if (!$customer || !Hash::check($request->password, $customer->password)) {
-            return back()->withErrors(['username' => 'Invalid username or password.'])->withInput();
+            return back()->withErrors(['email' => 'Invalid email or password.'])->withInput();
         }
 
         Auth::guard('customer')->login($customer, $request->boolean('remember'));

@@ -5,7 +5,7 @@
     @include('layouts.head')
 </head>
 
-<body onload="initialize()">
+<body>
     <div id="wrapper">
 
         {{-- page preloader begin --}}
@@ -34,6 +34,7 @@
     </div>
 
     @include('layouts.script')
+    @yield('scripts')
 
 </body>
 </html>

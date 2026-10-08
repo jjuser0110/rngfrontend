@@ -20,8 +20,8 @@
                             <form id="form_register" class="form-border" method="POST" action="{{ route('login') }}">
                                 @csrf
                                 <div class="field-set">
-                                    <input type="text" name="username" id="username" class="form-control" placeholder="Your Username" value="{{ old('username') }}" required />
-                                    @error('username')<small class="text-danger">{{ $message }}</small>@enderror
+                                    <input type="text" name="email" id="email" class="form-control" placeholder="Your Email" value="{{ old('email') }}" required />
+                                    @error('email')<small class="text-danger">{{ $message }}</small>@enderror
                                 </div>
                                 <div class="field-set">
                                     <input type="password" name="password" id="password" class="form-control" placeholder="Your Password" required />
