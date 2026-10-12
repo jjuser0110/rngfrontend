@@ -50,7 +50,7 @@
 
                     <div class="row g-4">
                         @forelse($cars as $car)
-                            <!-- Mobile & Tablet View Card -->
+                            {{-- Mobile & Tablet View Card --}}
                             <div class="col-md-6 col-12 d-xl-none">
                                 <div class="card border-0 shadow rounded-3 p-3 bg-white h-100 d-flex flex-column justify-content-between position-relative">
                                     <div>
@@ -103,60 +103,60 @@
                                 </div>
                             </div>
 
-                            <!-- Desktop View Card (Thicker padding and taller image) -->
-                            <div class="col-12 d-none d-xl-block">
-                                <div class="card border border-light shadow rounded-3 p-5 bg-white position-relative">
-                                    <div class="row g-4 align-items-center">
-                                        <div class="col-lg-4 text-center">
-                                            <div class="position-relative">
-                                                <span class="text-uppercase fs-10 fw-bold tracking-wider bg-light border px-2.5 py-1.5 position-absolute top-0 start-0 m-2 rounded-1" style="color: #495057; border-color: #dee2e6 !important; z-index: 2;">
-                                                    {{ $car->type ?? 'Standard' }}
-                                                </span>
-                                                <img src="{{ $car->image ? asset('storage/' . $car->image) : asset('images/cars/jeep-renegade.jpg') }}"
-                                                     class="img-fluid rounded-2 w-100"
-                                                     alt="{{ $car->name }}"
-                                                     style="height: 180px; object-fit: cover;">
+                            {{-- Desktop View Card (Set to col-xl-6 for 2 items in a row) --}}
+                            <div class="col-xl-6 col-12 d-none d-xl-block">
+                                <div class="card border border-light shadow rounded-3 p-4 bg-white position-relative h-100 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div class="position-relative mb-3">
+                                            <span class="text-uppercase fs-10 fw-bold tracking-wider bg-light border px-2 py-1 position-absolute top-0 start-0 m-2 rounded-1" style="color: #495057; border-color: #dee2e6 !important; z-index: 2;">
+                                                {{ $car->type ?? 'Standard' }}
+                                            </span>
+                                            <img src="{{ $car->image ? asset('storage/' . $car->image) : asset('images/cars/jeep-renegade.jpg') }}"
+                                                 class="img-fluid rounded-2 w-100"
+                                                 alt="{{ $car->name }}"
+                                                 style="height: 150px; object-fit: cover;">
+                                        </div>
+
+                                        <h3 class="fw-bold fs-17 mb-2" style="color: #33383c;">
+                                            {{ $car->name }} <span class="fs-12 fw-normal" style="color: #6c757d;">or similar</span>
+                                        </h3>
+
+                                        <ul class="list-unstyled fs-12 mb-3 d-flex flex-wrap gap-3 fw-semibold" style="color: #495057;">
+                                            <li><i class="fa fa-user me-1" style="color: #e9993e;"></i> {{ $car->seats ?? '4' }} Seats</li>
+                                            <li><i class="fa fa-briefcase me-1" style="color: #e9993e;"></i> {{ $car->luggage ?? '2' }} Bags</li>
+                                            <li><i class="fa fa-snowflake me-1" style="color: #e9993e;"></i> A/C</li>
+                                            <li><i class="fa fa-cogs me-1" style="color: #e9993e;"></i> {{ $car->drive ?? 'Auto' }}</li>
+                                        </ul>
+
+                                        <div class="d-flex flex-wrap gap-2 mb-3">
+                                            <button type="button" class="bg-light border px-2 py-1 fs-11 rounded-1 fw-semibold text-start" style="color: #495057; border-color: #dee2e6 !important; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#insuranceModal_{{ $car->id }}">
+                                                <i class="fa fa-shield-alt me-1" style="color: #e9993e;"></i> {{ $car->insurance_package ?? 'Basic CDW' }} <i class="fa fa-info-circle ms-1 text-muted"></i>
+                                            </button>
+                                            <span class="bg-light border px-2 py-1 fs-11 rounded-1 fw-semibold" style="color: #495057; border-color: #dee2e6 !important;">
+                                                <i class="fa fa-lock me-1" style="color: #e9993e;"></i> Bond: ${{ $car->deposit_amount ?? '150' }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-3 border-top border-light mt-auto">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div>
+                                                <span class="text-uppercase fs-10 fw-bold tracking-wider d-block mb-0" style="color: #6c757d;">Daily Rate</span>
+                                                <div class="fw-bold fs-20" style="color: #33383c;">${{ number_format($car->daily_rate, 2) }} <span class="fs-12 fw-normal" style="color: #6c757d;">/ day</span></div>
+                                            </div>
+                                            <div class="text-end">
+                                                <p class="fs-11 mb-0" style="color: #6c757d;">Inclusive of local taxes</p>
                                             </div>
                                         </div>
 
-                                        <div class="col-lg-8">
-                                            <div class="row align-items-center">
-                                                <div class="col-lg-7 border-end-lg pe-lg-4">
-                                                    <h3 class="fw-bold fs-18 mb-3" style="color: #33383c;">{{ $car->name }} <span class="fs-13 fw-normal" style="color: #6c757d;">or similar</span></h3>
-
-                                                    <ul class="list-unstyled fs-13 mb-4 d-flex flex-wrap gap-3 fw-semibold" style="color: #495057;">
-                                                        <li><i class="fa fa-user me-1" style="color: #e9993e;"></i> {{ $car->seats ?? '4' }} Seats</li>
-                                                        <li><i class="fa fa-briefcase me-1" style="color: #e9993e;"></i> {{ $car->luggage ?? '2' }} Bags</li>
-                                                        <li><i class="fa fa-snowflake me-1" style="color: #e9993e;"></i> A/C</li>
-                                                        <li><i class="fa fa-cogs me-1" style="color: #e9993e;"></i> {{ $car->drive ?? 'Auto' }}</li>
-                                                    </ul>
-
-                                                    <div class="d-flex flex-wrap gap-2">
-                                                        <button type="button" class="bg-light border px-2.5 py-1.5 fs-12 rounded-1 fw-semibold text-start" style="color: #495057; border-color: #dee2e6 !important; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#insuranceModal_{{ $car->id }}">
-                                                            <i class="fa fa-shield-alt me-1" style="color: #e9993e;"></i> {{ $car->insurance_package ?? 'Basic CDW' }} <i class="fa fa-info-circle ms-1 text-muted"></i>
-                                                        </button>
-                                                        <span class="bg-light border px-2.5 py-1.5 fs-12 rounded-1 fw-semibold" style="color: #495057; border-color: #dee2e6 !important;">
-                                                            <i class="fa fa-lock me-1" style="color: #e9993e;"></i> Bond: ${{ $car->deposit_amount ?? '150' }}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-lg-5 text-lg-end ps-lg-4 mt-3 mt-lg-0">
-                                                    <span class="text-uppercase fs-10 fw-bold tracking-wider d-block mb-1" style="color: #6c757d;">Daily Rate</span>
-                                                    <div class="fw-bold fs-22 mb-1" style="color: #33383c;">${{ number_format($car->daily_rate, 2) }} <span class="fs-12 fw-normal" style="color: #6c757d;">/ day</span></div>
-                                                    <p class="fs-12 mb-3" style="color: #6c757d;">Inclusive of local taxes</p>
-
-                                                    <a href="{{ route('cars.cart') }}" class="btn btn-dark w-100 text-center border-0 py-3 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-decoration-none" style="color: #ffffff !important;">
-                                                        Select Vehicle
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <a href="{{ route('cars.cart') }}" class="btn btn-dark w-100 text-center border-0 py-2.5 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-decoration-none text-white" style="color: #ffffff !important;">
+                                            Select Vehicle
+                                        </a>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Insurance Modal -->
+                            {{-- Insurance Modal --}}
                             <div class="modal fade" id="insuranceModal_{{ $car->id }}" tabindex="-1" aria-labelledby="insuranceModalLabel_{{ $car->id }}" aria-hidden="true">
                                 <div class="modal-dialog modal-dialog-centered">
                                     <div class="modal-content border-0 shadow rounded-3">

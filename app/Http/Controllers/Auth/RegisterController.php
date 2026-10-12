@@ -28,6 +28,7 @@ class RegisterController extends Controller
     public function register(Request $request)
     {
         $request->validate([
+            'username'          => 'required|string|max:255|unique:users,username|unique:customers,username',
             'email'             => 'required|string|email|max:255|unique:customers,email|unique:users,email',
             'password'          => 'required|string|min:6|confirmed',
             'first_name'        => 'required|string|max:255',
@@ -44,6 +45,8 @@ class RegisterController extends Controller
         $data['is_agent'] = 0;
 
         $customer = Customer::create($data);
+        $customer->password = Hash::make($request->password);
+        $customer->save();
 
         if ($request->temp_uuid) {
             $temp = TemporaryUpload::where('uuid', $request->temp_uuid)->first();
@@ -57,7 +60,7 @@ class RegisterController extends Controller
 
         $user = new User();
         $user->name        = $customer->first_name . ' ' . $customer->last_name;
-        $user->username    = $customer->email;
+        $user->username    = $request->username;
         $user->email       = $customer->email;
         $user->password    = Hash::make($request->password);
         $user->customer_id = $customer->id;
@@ -74,8 +77,8 @@ class RegisterController extends Controller
             $user->companies()->sync($request->company_ids);
         }
 
-        Auth::guard('customer')->login($customer);
+        Auth::login($user);
 
-        return redirect()->route('myaccount');
+        return redirect()->route('myaccount.index');
     }
 }

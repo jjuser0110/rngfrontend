@@ -23,24 +23,21 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|string',
+            'username' => 'required|string',
             'password' => 'required|string',
         ]);
 
-        $customer = Customer::where('email', $request->email)->first();
-
-        if (!$customer || !Hash::check($request->password, $customer->password)) {
-            return back()->withErrors(['email' => 'Invalid email or password.'])->withInput();
+        if (Auth::attempt($request->only('username', 'password'), $request->boolean('remember'))) {
+            $request->session()->regenerate();
+            return redirect()->intended(route('myaccount.index'));
         }
 
-        Auth::guard('customer')->login($customer, $request->boolean('remember'));
-
-        return redirect()->route('myaccount');
+        return back()->withErrors(['username' => 'Invalid username or password.'])->withInput();
     }
 
     public function logout(Request $request)
     {
-        Auth::guard('customer')->logout();
+        Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect()->route('login');

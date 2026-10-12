@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\WelcomeController;
 
 Route::get('/login',    [LoginController::class,    'showLoginForm'])->name('login');
 Route::post('/login',   [LoginController::class,    'login']);
@@ -13,13 +14,14 @@ Route::post('/register', [RegisterController::class, 'register']);
 Route::post('/attachments/store', [App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.store');
 Route::delete('/attachments/{media}', [App\Http\Controllers\AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
-Route::get('/', [App\Http\Controllers\WelcomeController::class, 'welcome'])->name('welcome');
-Route::get('/aboutus', [App\Http\Controllers\WelcomeController::class, 'aboutus'])->name('aboutus');
-Route::get('/contact', [App\Http\Controllers\WelcomeController::class, 'contact'])->name('contact');
-Route::post('/track-event', [App\Http\Controllers\WelcomeController::class, 'trackEvent'])->name('track.event');
+Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
+Route::get('/aboutus', [WelcomeController::class, 'aboutus'])->name('aboutus');
+Route::get('/contact', [WelcomeController::class, 'contact'])->name('contact');
+Route::post('/track-event', [WelcomeController::class, 'trackEvent'])->name('track.event');
 
-Route::group(['middleware' => ['auth:customer']], function () {
-    Route::get('/myaccount', [App\Http\Controllers\WelcomeController::class, 'myaccount'])->name('myaccount');
+Route::middleware(['auth'])->prefix('/myaccount')->as('myaccount.')->group(function () {
+    Route::get('/', [WelcomeController::class, 'myaccount'])->name('index');
+    Route::put('/profile', [WelcomeController::class, 'updateProfile'])->name('profile.update');
 });
 
 use App\Http\Controllers\QuotationController;

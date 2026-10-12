@@ -70,7 +70,13 @@
                                 </div>
 
                                 <div class="row g-3">
-                                    <div class="col-12">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold fs-13" for="username" style="color: #495057;">Username <span class="text-danger">*</span></label>
+                                        <input type="text" id="username" class="form-control fs-13 py-2 @error('username') is-invalid @enderror" name="username" value="{{ old('username') }}" placeholder="johndoe" style="border-color: #dee2e6;">
+                                        <div class="invalid-feedback" id="username-error">@error('username') {{ $message }} @else Username is required. @enderror</div>
+                                    </div>
+
+                                    <div class="col-md-6">
                                         <label class="form-label fw-semibold fs-13" for="email" style="color: #495057;">Email Address <span class="text-danger">*</span></label>
                                         <input type="email" id="email" class="form-control fs-13 py-2 @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" placeholder="john@example.com" style="border-color: #dee2e6;">
                                         <div class="invalid-feedback" id="email-error">@error('email') {{ $message }} @else Email address is required. @enderror</div>
@@ -273,13 +279,21 @@ $(document).ready(function() {
 
     function validateStep1() {
         let isValid = true;
+        const usernameInput = $('#username');
         const emailInput = $('#email');
         const passwordInput = $('#password');
         const confirmPasswordInput = $('#password_confirmation');
 
+        usernameInput.removeClass('is-invalid');
         emailInput.removeClass('is-invalid');
         passwordInput.removeClass('is-invalid');
         confirmPasswordInput.removeClass('is-invalid');
+
+        if (!usernameInput.val().trim()) {
+            $('#username-error').text('Username is required.');
+            usernameInput.addClass('is-invalid');
+            isValid = false;
+        }
 
         const emailVal = emailInput.val().trim();
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -382,7 +396,7 @@ $(document).ready(function() {
         return isValid;
     }
 
-    $('#email, #password, #password_confirmation, #first_name, #last_name, #phone_number, #date_of_birth, #ic, #expiration_date').on('input change', function() {
+    $('#username, #email, #password, #password_confirmation, #first_name, #last_name, #phone_number, #date_of_birth, #ic, #expiration_date').on('input change', function() {
         if ($(this).val()) {$(this).removeClass('is-invalid'); }
     });
 
@@ -456,7 +470,6 @@ $(document).ready(function() {
         }
     });
 
-    // Drag and Drop visual effects & event handlers
     const dropzone = $('#dropzone-box');
 
     dropzone.on('dragover dragenter', function(e) {
@@ -474,12 +487,10 @@ $(document).ready(function() {
     dropzone.on('drop', function(e) {
         let droppedFiles = e.originalEvent.dataTransfer.files;
         if (droppedFiles.length > 0) {
-            // Take only the first file if multiple were dropped
             processAndUploadFile(droppedFiles[0]);
         }
     });
 
-    // File inputs change handlers
     $('#attachments, #camera').on('change', function () {
         if (this.files.length > 0) {
             processAndUploadFile(this.files[0]);
@@ -487,7 +498,6 @@ $(document).ready(function() {
         }
     });
 
-    // Function to handle single file upload and replace existing row
     function processAndUploadFile(file) {
         let formData = new FormData();
         if (window.mediaConfig.modelType !== null) formData.append('model_type', window.mediaConfig.modelType);
@@ -497,10 +507,8 @@ $(document).ready(function() {
         let uuid = $('#temp_uuid').val();
         if (uuid) formData.append('uuid', uuid);
 
-        // Append as a single array item expected by validation rules
         formData.append('attachments[]', file);
 
-        // If there's an existing file uploaded, we can delete the old one or just clear the view view
         let existingRow = $('#attachment-list .attachment-row');
         let oldMediaId = existingRow.attr('data-id');
 
@@ -514,9 +522,8 @@ $(document).ready(function() {
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                 success: function (res) {
                     $('#temp_uuid').val(res.uuid);
-                    $('#attachment-list').empty(); // Clear previous file view
+                    $('#attachment-list').empty();
 
-                    // Since it's single file, take the last/newest file from response
                     let fileData = res.files[res.files.length - 1];
                     let fileUrl = fileData.url.startsWith('http') ? fileData.url : window.location.origin + fileData.url;
                     let fileName = file.name || 'Uploaded Document';
@@ -538,13 +545,12 @@ $(document).ready(function() {
                         </div>
                     `);
                 },
-                error: function(xhr) {
+                error: function() {
                     alert('Failed to upload file. Please try again.');
                 }
             });
         };
 
-        // If an old file already exists, delete it from storage/database first before uploading the new one
         if (oldMediaId) {
             $.ajax({
                 url: `/attachments/${oldMediaId}`,
@@ -559,7 +565,6 @@ $(document).ready(function() {
         }
     }
 
-    // Delete handler using native confirm dialog
     $(document).on('click', '.delete-attachment', function (e) {
         e.preventDefault();
         const button = $(this).closest('.delete-attachment');
@@ -581,7 +586,6 @@ $(document).ready(function() {
         }
     });
 
-    // Preview handler using native window.open
     $(document).on('click', '.attachment-preview', function () {
         const imageUrl = $(this).data('full');
         window.open(imageUrl, '_blank');
