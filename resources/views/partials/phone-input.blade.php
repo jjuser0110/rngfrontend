@@ -8,6 +8,8 @@
 <style>
     .iti { width: 100%; }
     .iti.is-invalid .form-control { border-color: #dc3545 !important; }
+    /* Room between the error and the input above / the field below */
+    .iti ~ .invalid-feedback { margin-top: .375rem; margin-bottom: .5rem; line-height: 1.4; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.2.1/js/intlTelInput.min.js"></script>
 <script>
