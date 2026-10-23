@@ -7,6 +7,18 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## RNG Frontend: shared database
+
+rngfrontend is the customer booking site. It shares the `rngcarrental` database with the
+rngcarrental admin system.
+
+- **Never run migrations from this project** (`migrate`, `migrate:fresh`, `migrate:rollback`,
+  `db:wipe`, `db:seed`). All schema changes live in rngcarrental's `database/migrations`.
+  `migrate:fresh` here would wipe the live shared database.
+- **Models are copied from rngcarrental.** When a model changes there, copy it here too.
+  `Customer` and `User` intentionally differ: they keep the frontend's registration and login
+  fields (`username`, `password`, `customer_id`).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

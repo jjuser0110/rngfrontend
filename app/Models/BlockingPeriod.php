@@ -31,4 +31,18 @@ class BlockingPeriod extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function getStartAtAttribute()
+    {
+        return Carbon\Carbon::parse(
+            $this->start_date . ' ' . ($this->start_time ?? '00:00:00')
+        );
+    }
+
+    public function getEndAtAttribute()
+    {
+        return Carbon\Carbon::parse(
+            $this->end_date . ' ' . ($this->end_time ?? '23:59:59')
+        );
+    }
 }

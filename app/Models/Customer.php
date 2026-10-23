@@ -35,6 +35,11 @@ class Customer extends Authenticatable implements HasMedia
 
     protected $hidden = ['password', 'remember_token'];
 
+    // is_agent is set by staff in rngcarrental only, so it is cast here but deliberately not fillable
+    protected $casts = [
+        'is_agent' => 'boolean',
+    ];
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('attachments');
@@ -76,7 +81,10 @@ class Customer extends Authenticatable implements HasMedia
 
     public function getOutstandingAttribute()
     {
-        $outstanding = $this->reservations()->sum('outstanding_balance');
+        $outstanding = $this->reservations()
+                        ->whereNull('deleted_at')
+                        ->whereNull('cancelled_at')
+                        ->sum('outstanding_balance');
         return $outstanding;
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\InvoiceService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -59,26 +60,33 @@ class Payment extends Model
 
     public function updateReservationPaidAmount()
     {
+        if (!$this->reservation) {
+            return;
+        }
+
+        app(InvoiceService::class)->allocatePayments($this->reservation);
+
         if ($this->reservation) {
             $totalPaid = $this->reservation
                 ->payments()
                 ->whereNull('deleted_at')
                 ->sum('amount');
 
+            $outstanding = $this->reservation
+                ->invoices()
+                ->where('period_start', '<=', now())
+                ->sum('outstanding_amount');
+
             // $totalRefund = $this->reservation
             //     ->refunds()
             //     ->whereNull('deleted_at')
             //     ->sum('amount');
 
-            $outstanding = ($this->reservation->total_price ?? 0) - $totalPaid;
-
-            if ($totalPaid <= 0) {
-                $payment_status = 'Unpaid';
-            } elseif ($outstanding <= 0) {
-                $payment_status = 'Fully Paid';
-            } else {
-                $payment_status = 'Partially Paid';
-            }
+            $payment_status = match (true) {
+                $totalPaid <= 0   => 'Unpaid',
+                $outstanding <= 0 => 'Fully Paid',
+                default           => 'Partially Paid',
+            };
 
             $this->reservation->update([
                 'total_paid'            => $totalPaid,

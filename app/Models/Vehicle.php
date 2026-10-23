@@ -101,27 +101,50 @@ class Vehicle extends Model
 
     public function isAvailable($pickup, $return, $ignoreReservationId = null)
     {
-        return !$this->reservations()
+        return !$this->hasConflict($pickup, $return, $ignoreReservationId);
+    }
+
+    public function hasConflict($pickup, $return, $ignoreReservationId = null)
+    {
+        $reservationConflict = $this->reservations()
             ->when($ignoreReservationId, function ($q) use ($ignoreReservationId) {
                 $q->where('id', '!=', $ignoreReservationId);
             })
-            ->where(function ($q) use ($pickup, $return) {
-                $q->whereRaw("STR_TO_DATE(CONCAT(pickup_date, ' ', pickup_time), '%Y-%m-%d %H:%i') < ?", [$return])
-                ->whereRaw("STR_TO_DATE(CONCAT(return_date, ' ', return_time), '%Y-%m-%d %H:%i') > ?", [$pickup]);
-            })
             ->whereIn('status', ['Open', 'Rental'])
+            ->whereRaw("
+                DATE_SUB(STR_TO_DATE(CONCAT(pickup_date, ' ', pickup_time), '%Y-%m-%d %H:%i'), INTERVAL 5 MINUTE) < ?
+            ", [$return])
+            ->whereRaw("
+                DATE_ADD(STR_TO_DATE(CONCAT(return_date, ' ', return_time), '%Y-%m-%d %H:%i'), INTERVAL 5 MINUTE) > ?
+            ", [$pickup])
             ->exists();
+
+        $blockingConflict = $this->blockingPeriods()
+            ->whereRaw("
+                DATE_SUB(STR_TO_DATE(CONCAT(start_date, ' ', COALESCE(start_time, '00:00')), '%Y-%m-%d %H:%i'), INTERVAL 5 MINUTE) < ?
+            ", [$return])
+            ->whereRaw("
+                DATE_ADD(STR_TO_DATE(CONCAT(end_date, ' ', COALESCE(end_time, '23:59')), '%Y-%m-%d %H:%i'), INTERVAL 5 MINUTE) > ?
+            ", [$pickup])
+            ->exists();
+
+        return $reservationConflict || $blockingConflict;
     }
 
     public function nextAvailable($pickup)
     {
         $conflict = $this->reservations()
-            ->whereRaw("STR_TO_DATE(CONCAT(return_date, ' ', return_time), '%Y-%m-%d %H:%i') > ?", [$pickup])
+            ->whereIn('status', ['Open', 'Rental'])
+            ->whereRaw("DATE_ADD(STR_TO_DATE(CONCAT(return_date, ' ', return_time), '%Y-%m-%d %H:%i'), INTERVAL 5 MINUTE) > ?", [$pickup])
             ->orderByRaw("STR_TO_DATE(CONCAT(return_date, ' ', return_time), '%Y-%m-%d %H:%i')")
-            ->whereNotIn('status', ['Open', 'Rental'])
             ->first();
 
-        return $conflict ? $conflict->return_at : null;
+        // add the 1-hour buffer to the actual next-available moment
+        if (!$conflict) {
+            return null;
+        }
+
+        return \Carbon\Carbon::parse($conflict->return_date . ' ' . $conflict->return_time)->addHour();
     }
 
     public function getCurrentRenterAttribute()

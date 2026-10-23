@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -79,6 +80,8 @@ class Reservation extends Model implements HasMedia
         'total_months',
         'total_days',
         'total_hours',
+        'raw_outstanding_balance',
+        'upcoming_balance',
     ];
 
     protected static function booted()
@@ -107,6 +110,63 @@ class Reservation extends Model implements HasMedia
             // $reservation->upsertRateDetail();
             // $reservation->recalculateTotalPrice();
         });
+    }
+
+    public function scopeWithOutstanding(Builder $query, $now = null): Builder
+    {
+        $now = $now ?? now();
+
+        return $query->whereRaw("
+            CASE
+                WHEN EXISTS (SELECT 1 FROM invoices i WHERE i.reservation_id = reservations.id AND i.deleted_at IS NULL)
+                THEN (SELECT COALESCE(SUM(i.outstanding_amount), 0)
+                        FROM invoices i
+                    WHERE i.reservation_id = reservations.id
+                        AND i.deleted_at IS NULL
+                        AND i.period_start <= ?)
+                WHEN TIMESTAMP(reservations.pickup_date, reservations.pickup_time) <= ?
+                THEN reservations.outstanding_balance
+                ELSE 0
+            END <> 0
+        ", [$now, $now]);
+    }
+
+    public function getOutstandingBalanceAttribute()
+    {
+        if ($this->invoices()->exists()) {
+            return $this->invoices()
+                ->where('period_start', '<=', now())
+                ->sum('outstanding_amount');
+        }
+
+        $pickupDateTime = (!empty($this->pickup_date) && !empty($this->pickup_time))
+            ? \Carbon\Carbon::parse($this->pickup_date . ' ' . $this->pickup_time)
+            : null;
+
+        if ($pickupDateTime && $pickupDateTime->isPast()) {
+            return $this->attributes['outstanding_balance'] ?? 0;
+        }
+
+        return 0;
+    }
+
+    public function getUpcomingBalanceAttribute()
+    {
+        if ($this->invoices()->exists()) {
+            return $this->invoices()
+                ->where('period_start', '>', now())
+                ->sum('outstanding_amount');
+        }
+
+        $pickupDateTime = (!empty($this->pickup_date) && !empty($this->pickup_time))
+            ? \Carbon\Carbon::parse($this->pickup_date . ' ' . $this->pickup_time)
+            : null;
+
+        if ($pickupDateTime && $pickupDateTime->isFuture()) {
+            return $this->attributes['outstanding_balance'] ?? 0;
+        }
+
+        return 0;
     }
 
     public function comments()
@@ -240,6 +300,7 @@ class Reservation extends Model implements HasMedia
             $quantity[] = $months;
         }
 
+
         /*
         |--------------------------------------------------------------------------
         | DAYS + HOURS (KEEP YOUR ORIGINAL RULE)
@@ -284,6 +345,11 @@ class Reservation extends Model implements HasMedia
             'return_date' => $this->return_date,
             'return_time' => $this->return_time,
         ]);
+
+        // Delete all rate details except the first one
+        $this->rateDetails()->where('id', '!=', $rateDetail->id)->delete();
+        $this->extensions()->delete();
+
     }
 
     public function updateVehicleClass()
@@ -413,6 +479,12 @@ class Reservation extends Model implements HasMedia
         return $this->hasMany(ChargeDetail::class)->where('is_adjustment', 1);
     }
 
+    // Charges that can be picked for an adjustment (excludes the adjustment rows themselves)
+    public function adjustableCharges()
+    {
+        return $this->hasMany(ChargeDetail::class)->whereNull('parent_charge_id');
+    }
+
     public function discountDetails()
     {
         return $this->hasMany(DiscountDetail::class);
@@ -474,6 +546,23 @@ class Reservation extends Model implements HasMedia
             'outstanding_balance'   => $outstanding,
             'payment_status'        => $payment_status,
         ]);
+
+        if (!$this->split_invoice) {
+            if ($this->invoices()->exists()) {
+                $this->invoices()->first()->update([
+                    'period_start'       => Carbon::parse($this->pickup_date . ' ' . $this->pickup_time),
+                    'period_end'         => Carbon::parse($this->return_date . ' ' . $this->return_time),
+                    'amount'             => $total,
+                    'paid_amount'        => $totalPaid,
+                    'outstanding_amount' => $outstanding,
+                    'payment_status'     => $payment_status,
+                ]);
+            }
+        } else {
+            if ($this->invoices()->exists()) {
+                app(\App\Services\InvoiceService::class)->generateInvoices($this);
+            }
+        }
 
         return $total;
     }
@@ -654,5 +743,10 @@ class Reservation extends Model implements HasMedia
             'company_id',
             $user->companies()->pluck('companies.id')
         );
+    }
+
+    public function getRawOutstandingBalanceAttribute()
+    {
+        return $this->attributes['outstanding_balance'] ?? 0;
     }
 }
