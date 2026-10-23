@@ -32,6 +32,8 @@ class Reservation extends Model implements HasMedia
         'airport',
         'vehicle_class_id',
         'new_vehicle_class_id',
+        'vehicle_model_id',
+        'source',
         'vehicle_id',
         'security_deposit',
         'total_price',
@@ -222,6 +224,21 @@ class Reservation extends Model implements HasMedia
     public function newVehicleClass()
     {
         return $this->belongsTo(VehicleClass::class, 'new_vehicle_class_id');
+    }
+
+    public function vehicleModel()
+    {
+        return $this->belongsTo(VehicleModel::class);
+    }
+
+    public function paymentTransactions()
+    {
+        return $this->hasMany(PaymentTransaction::class);
+    }
+
+    public function isFrontend()
+    {
+        return $this->source === 'frontend';
     }
 
     public function vehicle()

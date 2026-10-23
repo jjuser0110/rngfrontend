@@ -12,6 +12,7 @@ class ChargeDetail extends Model
     protected $fillable = [
         'reservation_id',
         'parent_charge_id',
+        'outstation_destination_id',
         'name',
         'amount',
         'quantity',
@@ -36,6 +37,11 @@ class ChargeDetail extends Model
     public function childAdjustments()
     {
         return $this->hasMany(ChargeDetail::class, 'parent_charge_id');
+    }
+
+    public function outstationDestination()
+    {
+        return $this->belongsTo(OutstationDestination::class);
     }
 
     public function isPriceAdjustment()

@@ -16,5 +16,10 @@ class ChargeType extends Model
         'amount',
         'unit',
         'max',
+        'show_on_frontend',
+    ];
+
+    protected $casts = [
+        'show_on_frontend' => 'boolean',
     ];
 }

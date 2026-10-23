@@ -17,6 +17,7 @@ Route::post('/attachments/store', [App\Http\Controllers\AttachmentController::cl
 Route::delete('/attachments/{media}', [App\Http\Controllers\AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
+Route::get('/test', [WelcomeController::class, 'test'])->name('test');
 Route::get('/aboutus', [WelcomeController::class, 'aboutus'])->name('aboutus');
 Route::get('/contact', [WelcomeController::class, 'contact'])->name('contact');
 Route::post('/track-event', [WelcomeController::class, 'trackEvent'])->name('track.event');

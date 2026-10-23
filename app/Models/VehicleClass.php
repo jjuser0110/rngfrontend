@@ -38,6 +38,11 @@ class VehicleClass extends Model implements HasMedia
         return $this->hasMany(Vehicle::class);
     }
 
+    public function vehicleModels()
+    {
+        return $this->hasMany(VehicleModel::class);
+    }
+
     public function availableVehicles($pickup, $return, $ignoreReservationId = null)
     {
         return $this->vehicles->filter(function ($vehicle) use ($pickup, $return, $ignoreReservationId) {
