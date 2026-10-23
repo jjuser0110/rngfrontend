@@ -41,11 +41,11 @@
                                 </div>
                                 <div class="text-center bg-white px-1 px-sm-2 step-item" id="indicator-step-2">
                                     <div class="rounded-circle text-muted fw-bold mx-auto mb-1 mb-sm-2 d-flex align-items-center justify-content-center bg-light border step-circle-item" style="width: 32px; height: 32px;">2</div>
-                                    <span class="d-block text-muted fs-10 fs-sm-12 text-truncate">Personal & Address</span>
+                                    <span class="d-block text-muted fs-10 fs-sm-12 text-truncate"><span class="d-sm-none">Personal</span><span class="d-none d-sm-inline">Personal & Address</span></span>
                                 </div>
                                 <div class="text-center bg-white px-1 px-sm-2 step-item" id="indicator-step-3">
                                     <div class="rounded-circle text-muted fw-bold mx-auto mb-1 mb-sm-2 d-flex align-items-center justify-content-center bg-light border step-circle-item" style="width: 32px; height: 32px;">3</div>
-                                    <span class="d-block text-muted fs-10 fs-sm-12 text-truncate">Driver Credentials</span>
+                                    <span class="d-block text-muted fs-10 fs-sm-12 text-truncate"><span class="d-sm-none">Driver</span><span class="d-none d-sm-inline">Driver Credentials</span></span>
                                 </div>
                             </div>
                         </div>
@@ -125,8 +125,10 @@
 
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold fs-13" for="phone_number" style="color: #495057;">Phone Number <span class="text-danger">*</span></label>
-                                        <input type="text" id="phone_number" class="form-control fs-13 py-2 @error('phone_number') is-invalid @enderror" name="phone_number" value="{{ old('phone_number') }}" placeholder="0123456789 or +601..." style="border-color: #dee2e6;">
-                                        <div class="invalid-feedback" id="phone_number-error">@error('phone_number') {{ $message }} @else Phone number is required. @enderror</div>
+                                        {{-- Visible picker; the hidden field submits the full number e.g. +60123456789 --}}
+                                        <input type="tel" id="phone_number_display" class="form-control fs-13 py-2" value="{{ old('phone_number') }}" placeholder="12-345 6789" style="border-color: #dee2e6;">
+                                        <input type="hidden" id="phone_number" name="phone_number" value="{{ old('phone_number') }}">
+                                        <div class="invalid-feedback @error('phone_number') d-block @enderror" id="phone_number-error">@error('phone_number') {{ $message }} @else Phone number is required. @enderror</div>
                                     </div>
 
                                     <div class="col-md-6">
@@ -265,9 +267,33 @@
 </div>
 <!-- content close -->
 
+@push('styles')
+<style>
+    /* Equal-width step columns that are allowed to shrink so all 3 fit on phones */
+    .step-item {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    @media (max-width: 575.98px) {
+        .card .px-2 {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        .fs-sm-12 {
+            font-size: 10px !important;
+        }
+        .display-6 {
+            font-size: 1.5rem !important;
+        }
+    }
+</style>
+@endpush
+
 @endsection
 
 @section('scripts')
+@include('partials.phone-input')
 <script>
 window.mediaConfig = {
     modelType: null,
@@ -333,12 +359,11 @@ $(document).ready(function() {
         let isValid = true;
         const firstName = $('#first_name');
         const lastName = $('#last_name');
-        const phoneNumber = $('#phone_number');
         const dob = $('#date_of_birth');
 
         firstName.removeClass('is-invalid');
         lastName.removeClass('is-invalid');
-        phoneNumber.removeClass('is-invalid');
+        phone.clearError();
         dob.removeClass('is-invalid');
 
         if (!firstName.val().trim()) {
@@ -350,16 +375,9 @@ $(document).ready(function() {
             isValid = false;
         }
 
-        const phoneVal = phoneNumber.val().trim();
-        const msPhoneRegex = /^(?:\+?60|0)[1-9][0-9]{7,9}$/;
-
-        if (!phoneVal) {
-            $('#phone_number-error').text('Phone number is required.');
-            phoneNumber.addClass('is-invalid');
-            isValid = false;
-        } else if (!msPhoneRegex.test(phoneVal.replace(/[\s-]/g, ''))) {
-            $('#phone_number-error').text('Invalid Malaysian phone number.');
-            phoneNumber.addClass('is-invalid');
+        const phoneError = phone.validate();
+        if (phoneError) {
+            phone.setError(phoneError);
             isValid = false;
         }
 
@@ -396,7 +414,9 @@ $(document).ready(function() {
         return isValid;
     }
 
-    $('#username, #email, #password, #password_confirmation, #first_name, #last_name, #phone_number, #date_of_birth, #ic, #expiration_date').on('input change', function() {
+    const phone = initPhoneInput('#phone_number_display', '#phone_number', '#phone_number-error');
+
+    $('#username, #email, #password, #password_confirmation, #first_name, #last_name, #date_of_birth, #ic, #expiration_date').on('input change', function() {
         if ($(this).val()) {$(this).removeClass('is-invalid'); }
     });
 
@@ -404,15 +424,93 @@ $(document).ready(function() {
         if ($(this).val()) {$(this).removeClass('is-invalid'); }
     });
 
+    // ---- Server-side validation on "Next" -------------------------------------------------
+    const validateStepUrl = "{{ route('register.validate-step') }}";
+
+    // Put the server's error messages under the matching inputs
+    function showServerErrors(errors) {
+        let $first = null;
+
+        $.each(errors, function (key, messages) {
+            let field = key;
+            const message = messages[0];
+
+            // Laravel reports a password mismatch on "password"; show it under the confirmation field
+            if (field === 'password' && /match/i.test(message)) {
+                field = 'password_confirmation';
+            }
+
+            // The submitted phone field is hidden; show its error on the picker
+            if (field === 'phone_number') {
+                phone.setError(message);
+                if (!$first) $first = $('#phone_number_display');
+                return;
+            }
+
+            const $input = $('#form_register [name="' + field + '"]').not('[type="hidden"]').first();
+            if (!$input.length) return;
+
+            $input.addClass('is-invalid');
+            $input.siblings('.invalid-feedback').first().text(message);
+
+            if (!$first) $first = $input;
+        });
+
+        if ($first) $first.trigger('focus');
+    }
+
+    // Send the fields of one step to the backend; run onSuccess() only if they all pass
+    function checkStepOnServer(step, $btn, onSuccess) {
+        const $icon = $btn.find('i');
+        const originalIconClass = $icon.attr('class');
+
+        $btn.prop('disabled', true);
+        $icon.attr('class', 'fa fa-spinner fa-spin ms-1');
+
+        $.ajax({
+            url: validateStepUrl,
+            type: 'POST',
+            dataType: 'json',
+            data: $('#step-' + step + ' :input').not('[type="file"]').serialize() + '&step=' + step,
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            success: onSuccess,
+            error: function (xhr) {
+                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                    showServerErrors(xhr.responseJSON.errors);
+                } else {
+                    alert('We could not validate your details right now. Please try again.');
+                }
+            },
+            complete: function () {
+                $btn.prop('disabled', false);
+                $icon.attr('class', originalIconClass);
+            }
+        });
+    }
+
+    function goToStep2() {
+        $('#step-1').addClass('d-none');
+        $('#step-2').removeClass('d-none');
+        $('#indicator-step-1 div').removeClass('text-white shadow-sm').addClass('text-white').css('background-color', '#198754').html('<i class="fa fa-check fs-11"></i>');
+        $('#indicator-step-1 span').removeClass('fw-bold text-dark').addClass('text-muted');
+        $('#indicator-step-2 div').removeClass('text-muted bg-light border').addClass('text-white shadow-sm').css('background-color', '#e9993e');
+        $('#indicator-step-2 span').removeClass('text-muted').addClass('fw-bold text-dark');
+    }
+
+    function goToStep3() {
+        $('#step-2').addClass('d-none');
+        $('#step-3').removeClass('d-none');
+        $('#indicator-step-2 div').removeClass('text-white shadow-sm').addClass('text-white').css('background-color', '#198754').html('<i class="fa fa-check fs-11"></i>');
+        $('#indicator-step-2 span').removeClass('fw-bold text-dark').addClass('text-muted');
+        $('#indicator-step-3 div').removeClass('text-muted bg-light border').addClass('text-white shadow-sm').css('background-color', '#e9993e');
+        $('#indicator-step-3 span').removeClass('text-muted').addClass('fw-bold text-dark');
+    }
+
     $(document).on('click', '#next-to-step-2', function(e) {
         e.preventDefault();
+        // 1) quick browser checks, 2) then the backend (username / email already taken, etc.)
         if (validateStep1()) {
-            $('#step-1').addClass('d-none');
-            $('#step-2').removeClass('d-none');
-            $('#indicator-step-1 div').removeClass('text-white shadow-sm').addClass('text-white').css('background-color', '#198754').html('<i class="fa fa-check fs-11"></i>');
-            $('#indicator-step-1 span').removeClass('fw-bold text-dark').addClass('text-muted');
-            $('#indicator-step-2 div').removeClass('text-muted bg-light border').addClass('text-white shadow-sm').css('background-color', '#e9993e');
-            $('#indicator-step-2 span').removeClass('text-muted').addClass('fw-bold text-dark');
+            checkStepOnServer(1, $(this), goToStep2);
         }
     });
 
@@ -429,12 +527,7 @@ $(document).ready(function() {
     $('#next-to-step-3').on('click', function(e) {
         e.preventDefault();
         if (validateStep2()) {
-            $('#step-2').addClass('d-none');
-            $('#step-3').removeClass('d-none');
-            $('#indicator-step-2 div').removeClass('text-white shadow-sm').addClass('text-white').css('background-color', '#198754').html('<i class="fa fa-check fs-11"></i>');
-            $('#indicator-step-2 span').removeClass('fw-bold text-dark').addClass('text-muted');
-            $('#indicator-step-3 div').removeClass('text-muted bg-light border').addClass('text-white shadow-sm').css('background-color', '#e9993e');
-            $('#indicator-step-3 span').removeClass('text-muted').addClass('fw-bold text-dark');
+            checkStepOnServer(2, $(this), goToStep3);
         }
     });
 

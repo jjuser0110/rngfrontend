@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Customer;
 use App\Models\TemporaryUpload;
+use App\Rules\PhoneNumber;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -48,7 +49,7 @@ class WelcomeController extends Controller
         $request->validate([
             'first_name'       => 'required|string|max:255',
             'last_name'        => 'required|string|max:255',
-            'phone_number'     => 'required|string|max:20',
+            'phone_number'     => ['required', 'string', 'max:20', new PhoneNumber],
             'date_of_birth'    => 'required|date',
             'ic'               => 'required|string|max:255',
             'expiration_date'  => 'required|date',
@@ -69,7 +70,7 @@ class WelcomeController extends Controller
         // Update customer personal and address details
         $customer->first_name      = $request->first_name;
         $customer->last_name       = $request->last_name;
-        $customer->phone_number    = $request->phone_number;
+        $customer->phone_number    = PhoneNumber::normalize($request->phone_number);
         $customer->date_of_birth   = $request->date_of_birth;
         $customer->ic              = $request->ic;
         $customer->expiration_date = $request->expiration_date;

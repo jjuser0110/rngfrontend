@@ -11,6 +11,8 @@ Route::post('/logout',  [LoginController::class,    'logout'])->name('logout');
 
 Route::get('/register',  [RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'register']);
+Route::post('/register/validate-step', [RegisterController::class, 'validateStep'])->name('register.validate-step')->middleware('throttle:30,1');
+
 Route::post('/attachments/store', [App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.store');
 Route::delete('/attachments/{media}', [App\Http\Controllers\AttachmentController::class, 'destroy'])->name('attachments.destroy');
 

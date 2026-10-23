@@ -246,8 +246,10 @@
 
                                         <div class="col-md-6">
                                             <label class="form-label fw-semibold fs-13" for="phone_number" style="color: #495057;">Phone Number / WhatsApp <span class="text-danger">*</span></label>
-                                            <input type="text" id="phone_number" class="form-control fs-13 py-2 @error('phone_number') is-invalid @enderror" name="phone_number" value="{{ old('phone_number', $customer->phone_number ?? '') }}" style="border-color: #dee2e6;">
-                                            @error('phone_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                            {{-- Visible picker; the hidden field submits the full number e.g. +60123456789 --}}
+                                            <input type="tel" id="phone_number_display" class="form-control fs-13 py-2" value="{{ old('phone_number', $customer->phone_number ?? '') }}" style="border-color: #dee2e6;">
+                                            <input type="hidden" id="phone_number" name="phone_number" value="{{ old('phone_number', $customer->phone_number ?? '') }}">
+                                            <div class="invalid-feedback @error('phone_number') d-block @enderror" id="phone_number-error">@error('phone_number') {{ $message }} @enderror</div>
                                         </div>
 
                                         <div class="col-md-6">
@@ -530,6 +532,7 @@
 @endsection
 
 @push('scripts')
+@include('partials.phone-input')
 <script>
 window.mediaConfig = {
     modelType: null,
@@ -538,6 +541,17 @@ window.mediaConfig = {
 };
 
 document.addEventListener('DOMContentLoaded', function () {
+    const phone = initPhoneInput('#phone_number_display', '#phone_number', '#phone_number-error');
+
+    $('#form_profile').on('submit', function (e) {
+        const phoneError = phone.validate();
+        if (phoneError) {
+            e.preventDefault();
+            phone.setError(phoneError);
+            $('#phone_number_display').trigger('focus');
+        }
+    });
+
     const triggerTabList = document.querySelectorAll('#accountTab .tab-btn');
     triggerTabList.forEach(button => {
         button.addEventListener('shown.bs.tab', event => {
