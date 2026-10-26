@@ -47,6 +47,12 @@ class VehicleModel extends Model implements HasMedia
         return $this->hasMany(Vehicle::class);
     }
 
+    // The model's own price for a rate or insurance field, otherwise the class's
+    public function rate($field)
+    {
+        return $this->$field ?? $this->vehicleClass->$field ?? 0;
+    }
+
     public function scopeShownOnFrontend($query)
     {
         return $query->where('is_active', 1)->where('show_on_frontend', 1);

@@ -371,22 +371,57 @@ class Reservation extends Model implements HasMedia
 
     public function updateVehicleClass()
     {
-        $vehicleClass = $this->vehicleClass;
-
         $rateDetail = $this->rateDetails()->first();
 
         if (!$rateDetail) {
             return;
         }
 
-        $rateDetail->update([
-            'hourly_rate'           => $vehicleClass->hourly_rate ?? 0,
-            'daily_rate'            => $vehicleClass->daily_rate ?? 0,
-            'monthly_rate'          => $vehicleClass->monthly_rate ?? 0,
-            'airport_hourly_rate'   => $vehicleClass->airport_hourly_rate ?? 0,
-            'airport_daily_rate'    => $vehicleClass->airport_daily_rate ?? 0,
-            'airport_monthly_rate'  => $vehicleClass->airport_monthly_rate ?? 0,
+        $rateDetail->update(array_merge($this->vehicleRates(), [
             'manually_changed'      => false,
+        ]));
+    }
+
+    // Rates for this reservation: the vehicle model's where set (frontend), otherwise the vehicle class's
+    public function vehicleRates()
+    {
+        $fields = ['hourly_rate', 'daily_rate', 'monthly_rate', 'airport_hourly_rate', 'airport_daily_rate', 'airport_monthly_rate'];
+
+        $rates = [];
+        foreach ($fields as $field) {
+            $rates[$field] = $this->vehicleModel
+                ? $this->vehicleModel->rate($field)
+                : ($this->vehicleClass->$field ?? 0);
+        }
+
+        return $rates;
+    }
+
+    public function cdrRate()
+    {
+        return $this->vehicleModel
+            ? $this->vehicleModel->rate('insurance')
+            : ($this->vehicleClass->insurance ?? 0);
+    }
+
+    // After a vehicle model change: reprice the CDR charge line, keeping its quantity and days
+    public function refreshCdrCharge()
+    {
+        $cdr = $this->chargeDetails()
+            ->where('name', ChargeType::CDR)
+            ->where('is_adjustment', 0)
+            ->whereNull('parent_charge_id')
+            ->first();
+
+        if (!$cdr) {
+            return;
+        }
+
+        $amount = $this->cdrRate();
+
+        $cdr->update([
+            'amount'        => $amount,
+            'total_charge'  => $amount * $cdr->quantity * $cdr->multiplier,
         ]);
     }
 

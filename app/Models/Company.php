@@ -20,6 +20,7 @@ class Company extends Model implements HasMedia
         'full_address',
         'bank_name',
         'account_number',
+        'whatsapp_number',
         'is_active',
     ];
 
@@ -27,6 +28,7 @@ class Company extends Model implements HasMedia
     {
         $this->addMediaCollection('logo')->singleFile();
         $this->addMediaCollection('chop')->singleFile();
+        $this->addMediaCollection('whatsapp_qr')->singleFile();
     }
 
     public function users()

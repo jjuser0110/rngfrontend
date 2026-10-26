@@ -11,6 +11,10 @@ class ChargeType extends Model
     use HasFactory;
     use SoftDeletes;
 
+    // Charge types the reservation code treats specially, matched by name as step 3 always has
+    const CDR = 'Collision Damage Reduction (CDR)';
+    const OUTSTATION = 'Outstation';
+
     protected $fillable = [
         'name',
         'amount',
