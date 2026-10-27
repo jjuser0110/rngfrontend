@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Customer;
 use App\Models\TemporaryUpload;
 use App\Rules\PhoneNumber;
+use App\Services\BookingQuote;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,30 @@ class WelcomeController extends Controller
 {
     public function welcome()
     {
-        return view('welcome');
+        // The vehicle search starts from the customer's last search, else tomorrow to three days later
+        // with the places and times left for the customer to choose
+        $locations = BookingQuote::locations();
+        $draft = session('booking', []);
+        $lastSearch = !empty($draft['searched']) && ($draft['pickup_date'] ?? '') >= now()->toDateString() ? $draft : [];
+        $schedule = $lastSearch ?: array_merge(BookingQuote::defaultSchedule($locations), [
+            'pickup_location_id' => null,
+            'return_location_id' => null,
+            'pickup_time'        => null,
+            'return_time'        => null,
+        ]);
+
+        // Text shown in the location boxes: the branch name, or the typed address
+        $placeOf = fn($side) => match (true) {
+            ($schedule[$side . '_location_id'] ?? null) === null => '',
+            (int) $schedule[$side . '_location_id'] === 0        => (string) ($schedule[$side . '_address'] ?? ''),
+            default                                              => (string) ($locations->firstWhere('id', $schedule[$side . '_location_id'])->name ?? ''),
+        };
+
+        return view('welcome', [
+            'locations' => $locations,
+            'timeSlots' => BookingQuote::timeSlots(),
+            'schedule'  => $schedule + ['pickup_place' => $placeOf('pickup'), 'return_place' => $placeOf('return')],
+        ]);
     }
 
     public function test()

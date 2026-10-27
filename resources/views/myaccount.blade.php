@@ -491,7 +491,7 @@
                                         <span class="text-uppercase fs-10 fw-bold d-block" style="color: #6c757d;">Daily Rate</span>
                                         <div class="fw-bold fs-18" style="color: #33383c;">$265.00 <span class="fs-11 fw-normal" style="color: #6c757d;">/ day</span></div>
                                     </div>
-                                    <a href="{{ route('cars.cart') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white">Rent Now</a>
+                                    <a href="{{ route('cars.index') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white">Rent Now</a>
                                 </div>
                             </div>
                         </div>
@@ -514,7 +514,7 @@
                                         <span class="text-uppercase fs-10 fw-bold d-block" style="color: #6c757d;">Daily Rate</span>
                                         <div class="fw-bold fs-18" style="color: #33383c;">$244.00 <span class="fs-11 fw-normal" style="color: #6c757d;">/ day</span></div>
                                     </div>
-                                    <a href="{{ route('cars.cart') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white">Rent Now</a>
+                                    <a href="{{ route('cars.index') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white">Rent Now</a>
                                 </div>
                             </div>
                         </div>

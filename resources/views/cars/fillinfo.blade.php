@@ -1,9 +1,26 @@
 @extends('layouts.app')
 
-@section('title', (isset($isConfirmed) && $isConfirmed ? 'Quotation Request Confirmation' : 'Your Details') . ' - ' . config('app.name', 'RNG Car Rental'))
-@section('meta_description', 'Complete and confirm your vehicle rental quotation request details.')
+@section('title', ($isConfirmed ? 'Booking Request Sent' : 'Your Details') . ' - ' . config('app.name', 'RNG Car Rental'))
+@section('meta_description', 'Confirm your contact details and send your car rental booking request.')
 
 @section('content')
+@php
+    // Pick-up / drop-off place: a branch name, or the address typed for "Other address" (location 0)
+    if ($isConfirmed) {
+        $vehicleModel = $reservation->vehicleModel;
+        $pickupAt = \Carbon\Carbon::parse($reservation->pickup_date . ' ' . $reservation->pickup_time);
+        $returnAt = \Carbon\Carbon::parse($reservation->return_date . ' ' . $reservation->return_time);
+        $pickupPlace = $reservation->pickup_location_id ? ($reservation->pickupLocation->name ?? '') : $reservation->pickup_address;
+        $returnPlace = $reservation->return_location_id ? ($reservation->returnLocation->name ?? '') : $reservation->return_address;
+    } else {
+        $pickupAt = $quote['pickup_at'];
+        $returnAt = $quote['return_at'];
+        $pickupPlace = (int) $draft['pickup_location_id'] ? ($locations[$draft['pickup_location_id']]->name ?? '') : $draft['pickup_address'];
+        $returnPlace = (int) $draft['return_location_id'] ? ($locations[$draft['return_location_id']]->name ?? '') : $draft['return_address'];
+    }
+    $image = $vehicleModel ? $vehicleModel->getFirstMedia('attachments') : null;
+    $imageUrl = $image ? $image->getUrl() : asset('images/cars/jeep-renegade.jpg');
+@endphp
 
 <div class="no-bottom no-top zebra pb-5 mb-5" id="content">
     <div id="top"></div>
@@ -14,14 +31,14 @@
             <div class="container py-2 py-md-3">
                 <div class="row">
                     <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 text-center">
-                        @if(isset($isConfirmed) && $isConfirmed)
+                        @if ($isConfirmed)
                             <span class="text-white-50 px-3 py-1 mb-2 text-uppercase tracking-wider fs-11 d-inline-block border border-secondary rounded-pill">Step 3 of 3</span>
-                            <h1 class="fw-bold display-6 mb-2 fs-3 fs-md-2 text-break">Request Confirmation</h1>
-                            <p class="text-white-50 fs-14 fs-md-15 mb-0 text-break">Your formal quotation package has been successfully processed</p>
+                            <h1 class="fw-bold display-6 mb-2 fs-3 fs-md-2 text-break">Request Sent</h1>
+                            <p class="text-white-50 fs-14 fs-md-15 mb-0 text-break">We've received your booking request</p>
                         @else
                             <span class="text-white-50 px-3 py-1 mb-2 text-uppercase tracking-wider fs-11 d-inline-block border border-secondary rounded-pill">Step 2 of 3</span>
                             <h1 class="fw-bold display-6 mb-2 fs-3 fs-md-2 text-break">Your Details</h1>
-                            <p class="text-white-50 fs-14 fs-md-15 mb-0 text-break">Provide your contact details to receive your formal pricing package</p>
+                            <p class="text-white-50 fs-14 fs-md-15 mb-0 text-break">Check your contact details and send your request</p>
                         @endif
                     </div>
                 </div>
@@ -32,39 +49,18 @@
     <section class="bg-light py-4 py-md-5">
         <div class="container-xxl container py-2">
 
-            @if(isset($isConfirmed) && $isConfirmed)
+            @include('cars.partials.steps', ['current' => $isConfirmed ? 3 : 2])
+            @include('layouts.flash-message')
 
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="card p-3 p-md-4 rounded-3 shadow-sm border border-light bg-white overflow-hidden">
-                            <div class="px-lg-5 position-relative">
-                                <div class="position-absolute w-75 start-50 translate-middle-x d-none d-sm-block" style="top: 18px; height: 3px; background-color: #198754; z-index: 1;"></div>
-                                <div class="d-flex justify-content-between align-items-center position-relative" style="z-index: 2;">
-                                    <div class="text-center bg-white px-1 px-sm-2">
-                                        <div class="rounded-circle text-white fw-bold mx-auto mb-1 mb-sm-2 d-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px; background-color: #198754;"><i class="fa fa-check fs-11"></i></div>
-                                        <span class="d-block fw-bold fs-11 fs-sm-12 text-success text-truncate">Review Cart</span>
-                                    </div>
-                                    <div class="text-center bg-white px-1 px-sm-2">
-                                        <div class="rounded-circle text-white fw-bold mx-auto mb-1 mb-sm-2 d-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px; background-color: #198754;"><i class="fa fa-check fs-11"></i></div>
-                                        <span class="d-block fw-bold fs-11 fs-sm-12 text-success text-truncate">Your Details</span>
-                                    </div>
-                                    <div class="text-center bg-white px-1 px-sm-2">
-                                        <div class="rounded-circle text-white fw-bold mx-auto mb-1 mb-sm-2 d-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px; background-color: #e9993e;">3</div>
-                                        <span class="d-block fw-bold fs-11 fs-sm-12 text-truncate" style="color: #33383c;">Quotation Sent</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            @if ($isConfirmed)
 
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="alert alert-success border-0 shadow-sm rounded-3 p-3 p-md-4 d-flex flex-column flex-sm-row align-items-sm-center gap-3 bg-white border-start border-4 border-success">
                             <div class="fs-1 text-success flex-shrink-0"><i class="fa fa-check-circle"></i></div>
                             <div class="min-w-0">
-                                <h4 class="fw-bold fs-16 mb-1 text-dark text-break">Thank you! Your quotation request has been sent.</h4>
-                                <p class="mb-0 text-muted fs-13 text-break">We have received your details and preferred vehicle selection. Our team will get in touch shortly based on your selected preferences.</p>
+                                <h4 class="fw-bold fs-16 mb-1 text-dark text-break">Thank you! Your booking request {{ $reservation->code }} has been sent.</h4>
+                                <p class="mb-0 text-muted fs-13 text-break">Our team will check the car and confirm your booking. You'll receive your quotation by email at <strong>{{ $customer->email }}</strong>.</p>
                             </div>
                         </div>
                     </div>
@@ -73,215 +69,116 @@
                 <div class="row g-4">
                     <div class="col-xl-8 col-12">
 
-                        <div class="card border border-light shadow-sm rounded-3 p-3 mb-4 bg-white text-dark d-flex flex-row align-items-center gap-3">
-                            <div class="rounded-circle bg-light p-2 text-success d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                                <i class="fa fa-check fs-14"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <span class="fw-bold fs-13 d-block text-dark text-break">Free Cancellation up to 48 Hours Before Pick-Up</span>
-                                <span class="fs-11 text-muted text-break">You can change or cancel your quotation request with zero fees anytime prior to confirmation.</span>
-                            </div>
-                        </div>
-
                         <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
                             <div class="row g-4 align-items-center">
                                 <div class="col-lg-5 col-md-5 text-center">
-                                    <div class="position-relative">
-                                        <span class="position-absolute top-0 start-0 badge text-white fw-bold fs-10 px-2 py-1 m-2" style="background-color: #e9993e; z-index: 2;">Top Pick</span>
-                                        <img src="{{ asset('images/cars/jeep-renegade.jpg') }}" class="img-fluid rounded-2 object-fit-cover shadow-sm" alt="Jeep Renegade" style="max-height: 180px; width: 100%;">
-                                    </div>
+                                    <img src="{{ $imageUrl }}" class="img-fluid rounded-2 shadow-sm" alt="{{ $vehicleModel->name ?? '' }}" style="max-height: 180px; width: 100%; object-fit: cover;">
                                 </div>
                                 <div class="col-lg-7 col-md-7">
                                     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2 mb-2">
                                         <div class="min-w-0">
-                                            <h4 class="fw-bold fs-18 mb-1 text-break" style="color: #33383c;">Jeep Renegade <span class="fs-12 text-muted fw-normal d-block d-sm-inline">or similar small car</span></h4>
-                                            <span class="d-block fs-12 text-muted mb-2 text-break"><i class="fa fa-map-marker-alt me-1" style="color: #e9993e;"></i> Kalmar Airport <span class="badge bg-light text-dark border ms-0 ms-sm-1 mt-1 mt-sm-0 fs-10">In Terminal</span></span>
+                                            <h4 class="fw-bold fs-18 mb-1 text-break" style="color: #33383c;">{{ $vehicleModel->name ?? '' }} <span class="fs-12 text-muted fw-normal d-block d-sm-inline">or similar</span></h4>
+                                            <span class="d-block fs-12 text-muted mb-2 text-break"><i class="fa fa-map-marker-alt me-1" style="color: #e9993e;"></i> {{ $pickupPlace }}</span>
                                         </div>
                                         <div class="text-start text-sm-end flex-shrink-0">
-                                            <span class="d-block text-uppercase fs-10 fw-bold text-muted">Estimated Rate</span>
-                                            <span class="fw-bold fs-18" style="color: #e9993e;">$2,247.20</span>
-                                            <span class="d-block fs-10 text-muted">Total for 8 Days</span>
+                                            <span class="d-block text-uppercase fs-10 fw-bold text-muted">Estimated Total</span>
+                                            <span class="fw-bold fs-18" style="color: #e9993e;">RM {{ number_format($reservation->total_price, 2) }}</span>
                                         </div>
                                     </div>
-
-                                    <div class="row g-2 pt-2 pb-3 border-top border-bottom border-light fs-12 text-muted mb-3">
-                                        <div class="col-6 col-sm-3 text-truncate"><i class="fa fa-user me-1 text-secondary"></i> 4 Seats</div>
-                                        <div class="col-6 col-sm-3 text-truncate"><i class="fa fa-cog me-1 text-secondary"></i> Manual</div>
-                                        <div class="col-6 col-sm-3 text-truncate"><i class="fa fa-suitcase me-1 text-secondary"></i> Large Bag</div>
-                                        <div class="col-6 col-sm-3 text-truncate"><i class="fa fa-briefcase me-1 text-secondary"></i> 1 Small Bag</div>
-                                    </div>
-
-                                    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2">
-                                        <span class="badge bg-light text-dark border fs-11 p-2 rounded-2 text-break"><i class="fa fa-snowflake me-1 text-primary"></i> Winter tyres included</span>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-dark text-white fw-bold px-2 py-1 fs-11">RNG</span>
-                                            <span class="fw-bold fs-12 text-nowrap" style="color: #33383c;">Superb <span class="text-muted fw-normal fs-11">(9.2 / 10)</span></span>
-                                        </div>
-                                    </div>
+                                    <span class="badge bg-light text-dark border fs-11 p-2 rounded-2">Status: Waiting for confirmation</span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                            <h5 class="fw-bold fs-15 mb-3 text-break" style="color: #33383c;"><i class="fa fa-award me-2" style="color: #e9993e;"></i>Great Choice! Why customers love this option:</h5>
-                            <div class="row g-3 fs-13 text-secondary">
-                                <div class="col-sm-6">
-                                    <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
-                                        <li class="text-break"><i class="fa fa-check-circle text-success me-2"></i> Customer rating: <strong>9.2 / 10</strong></li>
-                                        <li class="text-break"><i class="fa fa-check-circle text-success me-2"></i> Rental counter located in terminal</li>
-                                        <li class="text-break"><i class="fa fa-check-circle text-success me-2"></i> Short queue times upon arrival</li>
-                                    </ul>
-                                </div>
-                                <div class="col-sm-6">
-                                    <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
-                                        <li class="text-break"><i class="fa fa-check-circle text-success me-2"></i> Most popular corporate company</li>
-                                        <li class="text-break"><i class="fa fa-check-circle text-success me-2"></i> Most popular transparent fuel policy</li>
-                                        <li class="text-break"><i class="fa fa-check-circle text-success me-2"></i> Free Cancellation guarantee</li>
-                                    </ul>
-                                </div>
-                            </div>
+                            <h5 class="fw-bold fs-15 mb-3 text-break" style="color: #33383c;"><i class="fa fa-list-ol me-2" style="color: #e9993e;"></i>What Happens Next</h5>
+                            <ol class="fs-13 text-secondary mb-0 d-flex flex-column gap-2 ps-3">
+                                <li class="text-break">Our team checks the car for your dates. If your model isn't available, we'll contact you to suggest a similar one.</li>
+                                <li class="text-break">We email your quotation to <strong>{{ $customer->email }}</strong>, with the final price and how to pay the deposit.</li>
+                                <li class="text-break">Bring your IC or passport and driving licence when you pick up the car.</li>
+                            </ol>
                         </div>
 
-                        <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                            <h5 class="fw-bold fs-15 mb-3 text-break" style="color: #33383c;"><i class="fa fa-shield-alt me-2" style="color: #e9993e;"></i>Included in Your Quotation Package</h5>
-                            <div class="row g-3 fs-13 text-secondary">
-                                <div class="col-sm-6">
-                                    <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
-                                        <li class="text-break"><i class="fa fa-check text-success me-2"></i> Collision Damage Waiver included</li>
-                                        <li class="text-break"><i class="fa fa-check text-success me-2"></i> Theft Protection coverage</li>
-                                    </ul>
-                                </div>
-                                <div class="col-sm-6">
-                                    <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
-                                        <li class="text-break"><i class="fa fa-check text-success me-2"></i> Unlimited mileage allowance</li>
-                                        <li class="text-break"><i class="fa fa-check text-success me-2"></i> Local taxes and surcharges</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                            <h5 class="fw-bold fs-15 mb-3 text-break" style="color: #33383c;"><i class="fa fa-clipboard-list me-2" style="color: #e9993e;"></i>Your Pick-up Checklist</h5>
-                            <div class="d-flex flex-wrap gap-2 gap-md-3 mb-3 border-bottom border-light pb-2 fs-12 fw-semibold text-muted">
-                                <span class="text-dark border-bottom border-2 border-warning pb-2 text-nowrap"><i class="fa fa-clock me-1"></i> Arrive On Time</span>
-                                <span class="text-nowrap"><i class="fa fa-id-card me-1"></i> What to Bring</span>
-                                <span class="text-nowrap"><i class="fa fa-wallet me-1"></i> Refundable Deposit</span>
-                            </div>
-                            <p class="fs-13 text-secondary mb-2 text-break">Rental companies only allow you to get your keys at your allocated pick-up time. They will usually hold your car for a limited time after you're due to pick it up.</p>
-                            <div class="alert bg-light border border-light rounded-2 p-2 fs-12 text-dark mb-0 text-break">
-                                <i class="fa fa-info-circle me-1" style="color: #e9993e;"></i> Your scheduled pick-up time is: <strong>10:30 AM</strong>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ route('cars.index') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white shadow-sm border-0 text-decoration-none text-break">
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+                            <a href="{{ route('cars.index') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white shadow-sm border-0 text-decoration-none">
                                 <i class="fa fa-car me-2"></i> Browse More Cars
+                            </a>
+                            <a href="{{ route('myaccount.index') }}" class="btn btn-outline-secondary px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-dark bg-white shadow-sm border text-decoration-none" style="border-color: #adb5bd !important;">
+                                My Account
                             </a>
                         </div>
                     </div>
 
                     <div class="col-xl-4 col-12">
-                        <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                            <h5 class="fw-bold fs-15 mb-3 pb-2 border-bottom border-light text-break" style="color: #33383c;">Pick-up and Drop-off</h5>
-                            <div class="position-relative ps-3 ms-2 border-start border-2 border-warning my-3">
-                                <div class="mb-4 text-break">
-                                    <span class="d-block fs-11 text-muted fw-bold">SUN, 5 MAR • 10:30</span>
-                                    <span class="d-block fw-bold fs-13 text-dark">Kalmar Airport</span>
-                                    <a href="#" class="fs-11 text-decoration-none fw-semibold text-break" style="color: #e9993e;">View pick-up instructions</a>
-                                </div>
-                                <div class="text-break">
-                                    <span class="d-block fs-11 text-muted fw-bold">MON, 13 MAR • 10:30</span>
-                                    <span class="d-block fw-bold fs-13 text-dark">Kalmar Airport</span>
-                                    <a href="#" class="fs-11 text-decoration-none fw-semibold text-break" style="color: #e9993e;">View drop-off instructions</a>
-                                </div>
-                            </div>
-                        </div>
+                        @include('cars.partials.schedule', ['pickupAt' => $pickupAt, 'returnAt' => $returnAt, 'pickupPlace' => $pickupPlace, 'returnPlace' => $returnPlace])
 
                         <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                            <h5 class="fw-bold fs-15 mb-3 pb-2 border-bottom border-light text-break" style="color: #33383c;">Quotation Price Breakdown</h5>
-                            <div class="d-flex justify-content-between mb-2 fs-13 text-secondary gap-2">
-                                <span class="text-break">Car Hire Charge (8 Days):</span>
-                                <span class="fw-semibold text-dark text-nowrap">$2,147.20</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-2 fs-13 text-secondary gap-2">
-                                <span class="text-break">Taxes & Fees:</span>
-                                <span class="fw-semibold text-dark text-nowrap">$100.00</span>
-                            </div>
+                            <h5 class="fw-bold fs-15 mb-3 pb-2 border-bottom border-light text-break" style="color: #33383c;">Price Breakdown</h5>
+                            @foreach ($reservation->rateDetails as $rateDetail)
+                                @php $prefix = $rateDetail->airport ? 'airport_' : ''; @endphp
+                                @foreach (['months' => 'monthly_rate', 'days' => 'daily_rate', 'hours' => 'hourly_rate'] as $unit => $rateField)
+                                    @if ($rateDetail->$unit > 0)
+                                        <div class="d-flex justify-content-between mb-2 fs-13 text-secondary gap-2">
+                                            <span class="text-break">{{ $rateDetail->$unit }} {{ Str::plural(Str::singular($unit), $rateDetail->$unit) }} × RM {{ number_format($rateDetail->{$prefix . $rateField}, 2) }}</span>
+                                            <span class="fw-semibold text-dark text-nowrap">RM {{ number_format($rateDetail->{$prefix . $rateField} * $rateDetail->$unit, 2) }}</span>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            @endforeach
+                            @foreach ($reservation->chargeDetails as $charge)
+                                <div class="d-flex justify-content-between mb-2 fs-13 text-secondary gap-2">
+                                    <span class="text-break">{{ $charge->quantity > 1 ? $charge->quantity . '× ' : '' }}{{ $charge->name }}</span>
+                                    <span class="fw-semibold text-dark text-nowrap">RM {{ number_format($charge->total_charge, 2) }}</span>
+                                </div>
+                            @endforeach
                             <div class="d-flex justify-content-between pt-3 border-top border-light fs-14 fw-bold gap-2" style="color: #33383c;">
                                 <span class="text-break">Estimated Total:</span>
-                                <span style="color: #e9993e;" class="fs-16 text-nowrap">$2,247.20</span>
+                                <span style="color: #e9993e;" class="fs-16 text-nowrap">RM {{ number_format($reservation->total_price, 2) }}</span>
                             </div>
+                            <p class="fs-11 text-muted mt-2 mb-0">Plus a refundable security deposit of RM {{ number_format($reservation->security_deposit, 2) }}.</p>
                         </div>
 
-                        <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white">
-                            <h5 class="fw-bold fs-15 mb-3 pb-2 border-bottom border-light text-break" style="color: #33383c;">Further Information</h5>
-                            <p class="fs-11 text-muted mb-3 text-break" style="line-height: 1.5;">
-                                Legal Entity Name: RNG Car Rental Solutions Trade Register Number: Crossroads Bank for Enterprises Trade Number: 0415.872.355.<br><br>
-                                This partner has self-certified that its product and services conform to regional safety standards.
-                            </p>
-                            <div class="pt-2 border-top border-light">
-                                <span class="d-block fs-12 fw-bold text-dark mb-1 text-break"><i class="fa fa-envelope me-1" style="color: #e9993e;"></i> reservations@rngcarrental.com</span>
-                                <span class="d-block fs-12 fw-bold text-dark text-break"><i class="fa fa-phone-alt me-1" style="color: #e9993e;"></i> +60 3-8998 4300</span>
+                        @if ($whatsappNumber)
+                            <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white">
+                                <h5 class="fw-bold fs-15 mb-2 text-break" style="color: #33383c;">Questions?</h5>
+                                <p class="fs-12 text-muted mb-2">Chat with our customer service on WhatsApp. Quote your booking number {{ $reservation->code }}.</p>
+                                <span class="d-block fs-13 fw-bold text-dark text-break user-select-all"><i class="fa fa-whatsapp me-1" style="color: #25d366;"></i> {{ $whatsappNumber }}</span>
                             </div>
-                        </div>
+                        @endif
                     </div>
                 </div>
 
             @else
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="card p-3 p-md-4 rounded-3 shadow-sm border border-light bg-white overflow-hidden">
-                            <div class="px-2 px-md-5 position-relative">
-                                <div class="position-absolute start-0 end-0 mx-auto d-none d-sm-block step-connector-line" style="top: 18px; height: 3px; background-color: #dee2e6; z-index: 1; width: 70%;"></div>
 
-                                <div class="d-flex justify-content-between align-items-center position-relative" style="z-index: 2;">
-                                    <div class="text-center bg-white px-1 px-sm-2">
-                                        <a href="{{ route('cars.cart') }}" class="rounded-circle text-white fw-bold mx-auto mb-1 mb-sm-2 d-flex align-items-center justify-content-center shadow-sm text-decoration-none step-circle-item" style="width: 32px; height: 32px; background-color: #198754;"><i class="fa fa-check fs-11"></i></a>
-                                        <span class="d-block fw-bold fs-10 fs-sm-12 text-success text-truncate">Review Cart</span>
-                                    </div>
-                                    <div class="text-center bg-white px-1 px-sm-2">
-                                        <div class="rounded-circle text-white fw-bold mx-auto mb-1 mb-sm-2 d-flex align-items-center justify-content-center shadow-sm step-circle-item" style="width: 32px; height: 32px; background-color: #e9993e;">2</div>
-                                        <span class="d-block fw-bold fs-10 fs-sm-12 text-truncate" style="color: #33383c;">Your Details</span>
-                                    </div>
-                                    <div class="text-center bg-white px-1 px-sm-2">
-                                        <div class="rounded-circle text-muted fw-bold mx-auto mb-1 mb-sm-2 d-flex align-items-center justify-content-center bg-light border step-circle-item" style="width: 32px; height: 32px;">3</div>
-                                        <span class="d-block text-muted fs-10 fs-sm-12 text-truncate">Quotation Sent</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <form action="#" method="POST" id="quotationForm">
+                <form action="{{ route('cars.submit') }}" method="POST" id="detailsForm" onsubmit="return window.validateDetails ? window.validateDetails() : true">
                     @csrf
                     <div class="row g-4">
 
                         <div class="col-xl-8 col-12">
 
                             <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                                <div class="mb-3 pb-3 border-bottom border-light">
+                                <div class="mb-3 pb-3 border-bottom border-light d-flex justify-content-between align-items-center gap-2">
                                     <h5 class="fw-bold mb-0 fs-15 text-break" style="color: #33383c;">
                                         <i class="fa fa-user-circle me-2" style="color: #e9993e;"></i>Personal & Contact Information
                                     </h5>
+                                    <a href="{{ route('myaccount.index') }}" class="fs-12 text-decoration-none fw-semibold flex-shrink-0" style="color: #e9993e;">Edit in My Account</a>
                                 </div>
 
                                 <div class="row g-3">
                                     <div class="col-sm-6">
-                                        <label class="form-label small fw-bold text-uppercase fs-12 mb-1 text-break" style="color: #33383c;">First Name <span class="text-danger">*</span></label>
-                                        <input type="text" name="first_name" class="form-control fs-13 py-2" placeholder="John" value="{{ old('first_name') }}" style="border-color: #dee2e6;">
+                                        <span class="form-label small fw-bold text-uppercase fs-12 mb-1 d-block" style="color: #33383c;">Name</span>
+                                        <div class="form-control fs-13 py-2 bg-light text-break" style="border-color: #dee2e6;">{{ $customer->full_name }}</div>
                                     </div>
                                     <div class="col-sm-6">
-                                        <label class="form-label small fw-bold text-uppercase fs-12 mb-1 text-break" style="color: #33383c;">Last Name <span class="text-danger">*</span></label>
-                                        <input type="text" name="last_name" class="form-control fs-13 py-2" placeholder="Doe" value="{{ old('last_name') }}" style="border-color: #dee2e6;">
+                                        <span class="form-label small fw-bold text-uppercase fs-12 mb-1 d-block" style="color: #33383c;">Email Address</span>
+                                        <div class="form-control fs-13 py-2 bg-light text-break" style="border-color: #dee2e6;">{{ $customer->email }}</div>
                                     </div>
                                     <div class="col-sm-6">
-                                        <label class="form-label small fw-bold text-uppercase fs-12 mb-1 text-break" style="color: #33383c;">Email Address <span class="text-danger">*</span></label>
-                                        <input type="email" name="email" class="form-control fs-13 py-2 text-break" placeholder="john.doe@example.com" value="{{ old('email') }}" style="border-color: #dee2e6;">
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <label class="form-label small fw-bold text-uppercase fs-12 mb-1 text-break" style="color: #33383c;">Phone Number / WhatsApp <span class="text-danger">*</span></label>
-                                        <input type="tel" name="phone" class="form-control fs-13 py-2" placeholder="+60 12-345 6789" value="{{ old('phone') }}" style="border-color: #dee2e6;">
+                                        <label class="form-label small fw-bold text-uppercase fs-12 mb-1" for="phone_number_display" style="color: #33383c;">Phone Number / WhatsApp <span class="text-danger">*</span></label>
+                                        {{-- Visible picker; the hidden field submits the full number e.g. +60123456789 --}}
+                                        <input type="tel" id="phone_number_display" class="form-control fs-13 py-2" value="{{ old('phone_number', $customer->phone_number) }}" style="border-color: #dee2e6;">
+                                        <input type="hidden" id="phone_number" name="phone_number" value="{{ old('phone_number', $customer->phone_number) }}">
+                                        <div class="invalid-feedback @error('phone_number') d-block @enderror" id="phone_number-error">@error('phone_number') {{ $message }} @enderror</div>
                                     </div>
                                 </div>
                             </div>
@@ -294,87 +191,55 @@
                                 </div>
 
                                 <div class="mb-4">
-                                    <label class="form-label small fw-bold text-uppercase fs-12 mb-1 text-break" style="color: #33383c;">Notes / Flight Number / Hotel Details</label>
-                                    <textarea name="customer_notes" class="form-control fs-13 text-break" rows="3" placeholder="Let us know if you need hotel delivery, child seat customizations, or have questions about dates..." style="border-color: #dee2e6;"></textarea>
+                                    <label class="form-label small fw-bold text-uppercase fs-12 mb-1 text-break" for="customer_notes" style="color: #33383c;">Notes / Flight Number / Hotel Details</label>
+                                    <textarea name="customer_notes" id="customer_notes" class="form-control fs-13 text-break @error('customer_notes') is-invalid @enderror" rows="3" maxlength="1000" placeholder="Flight number, hotel for delivery, or any questions about your dates" style="border-color: #dee2e6;">{{ old('customer_notes') }}</textarea>
+                                    @error('customer_notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
 
                                 <div>
-                                    <label class="form-label small fw-bold text-uppercase fs-12 mb-3 d-block text-break" style="color: #33383c;">
-                                        <i class="fa fa-comments me-1" style="color: #e9993e;"></i> Preferred Communication Channel <span class="text-danger">*</span>
-                                    </label>
+                                    <span class="form-label small fw-bold text-uppercase fs-12 mb-3 d-block text-break" style="color: #33383c;">
+                                        <i class="fa fa-comments me-1" style="color: #e9993e;"></i> Preferred Contact <span class="text-danger">*</span>
+                                    </span>
 
+                                    @php $preference = old('contact_preference', 'whatsapp'); @endphp
                                     <div class="row g-3">
-                                        <div class="col-md-4 col-12">
-                                            <input class="form-check-input channel-input d-none" type="radio" name="contact_preference" id="prefEmailNum" value="email" checked>
-                                            <label class="channel-card-num p-3 rounded-2 d-flex align-items-center gap-3 h-100 w-100" for="prefEmailNum">
-                                                <div class="num-box flex-shrink-0">01</div>
-                                                <div class="min-w-0">
-                                                    <span class="d-block channel-title fw-bold fs-13 mb-0 text-break" style="color: #33383c;">Email</span>
-                                                    <span class="fs-11 text-muted text-break d-none d-xl-inline">Detailed written quote</span>
-                                                </div>
-                                            </label>
-                                        </div>
-
-                                        <div class="col-md-4 col-12">
-                                            <input class="form-check-input channel-input d-none" type="radio" name="contact_preference" id="prefWhatsappNum" value="whatsapp">
-                                            <label class="channel-card-num p-3 rounded-2 d-flex align-items-center gap-3 h-100 w-100" for="prefWhatsappNum">
-                                                <div class="num-box flex-shrink-0">02</div>
-                                                <div class="min-w-0">
-                                                    <span class="d-block channel-title fw-bold fs-13 mb-0 text-break" style="color: #33383c;">WhatsApp</span>
-                                                    <span class="fs-11 text-muted text-break d-none d-xl-inline">Fast instant messaging</span>
-                                                </div>
-                                            </label>
-                                        </div>
-
-                                        <div class="col-md-4 col-12">
-                                            <input class="form-check-input channel-input d-none" type="radio" name="contact_preference" id="prefPhoneNum" value="phone">
-                                            <label class="channel-card-num p-3 rounded-2 d-flex align-items-center gap-3 h-100 w-100" for="prefPhoneNum">
-                                                <div class="num-box flex-shrink-0">03</div>
-                                                <div class="min-w-0">
-                                                    <span class="d-block channel-title fw-bold fs-13 mb-0 text-break" style="color: #33383c;">Phone Call</span>
-                                                    <span class="fs-11 text-muted text-break d-none d-xl-inline">Direct voice discussion</span>
-                                                </div>
-                                            </label>
-                                        </div>
+                                        @foreach (['email' => ['Email', 'Written details'], 'whatsapp' => ['WhatsApp', 'Fast messaging'], 'phone' => ['Phone Call', 'Talk to our team']] as $value => [$title, $hint])
+                                            <div class="col-md-4 col-12">
+                                                <input class="form-check-input channel-input d-none" type="radio" name="contact_preference" id="pref_{{ $value }}" value="{{ $value }}" {{ $preference === $value ? 'checked' : '' }}>
+                                                <label class="channel-card-num p-3 rounded-2 d-flex align-items-center gap-3 h-100 w-100" for="pref_{{ $value }}">
+                                                    <div class="num-box flex-shrink-0"><i class="fa {{ ['email' => 'fa-envelope', 'whatsapp' => 'fa-whatsapp', 'phone' => 'fa-phone'][$value] }}"></i></div>
+                                                    <div class="min-w-0">
+                                                        <span class="d-block channel-title fw-bold fs-13 mb-0 text-break" style="color: #33383c;">{{ $title }}</span>
+                                                        <span class="fs-11 text-muted text-break">{{ $hint }}</span>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        @endforeach
                                     </div>
                                 </div>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center">
-                                <a href="{{ route('cars.cart') }}" class="btn btn-outline-secondary px-3 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-dark bg-white shadow-sm border w-100 text-center text-break" style="border-color: #adb5bd !important;">
+                                <a href="{{ route('cars.cart') }}" class="btn btn-outline-secondary px-3 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-dark bg-white shadow-sm border w-100 w-sm-auto text-center text-break" style="border-color: #adb5bd !important;">
                                     <i class="fa fa-arrow-left me-2"></i> Back to Cart
                                 </a>
                             </div>
                         </div>
 
-                        <div class="col-xl-4 col-12 d-none d-xl-block">
-                            <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white sticky-top" style="top: 20px; z-index: 10;">
+                        <div class="col-xl-4 col-12">
+                            @include('cars.partials.schedule', ['pickupAt' => $pickupAt, 'returnAt' => $returnAt, 'pickupPlace' => $pickupPlace, 'returnPlace' => $returnPlace])
 
+                            <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white">
                                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light gap-2">
                                     <h5 class="fw-bold mb-0 fs-15 text-break" style="color: #33383c;">Request Overview</h5>
-                                    <span class="bg-light border px-2 py-1 fs-11 rounded-1 fw-semibold flex-shrink-0 text-break" style="color: #495057; border-color: #dee2e6 !important;"><i class="fa fa-file-invoice me-1" style="color: #e9993e;"></i> Summary</span>
+                                    <span class="bg-light border px-2 py-1 fs-11 rounded-1 fw-semibold flex-shrink-0" style="color: #495057; border-color: #dee2e6 !important;"><i class="fa fa-file-invoice me-1" style="color: #e9993e;"></i> Estimate</span>
                                 </div>
 
-                                <div class="d-flex justify-content-between mb-2 fs-13 gap-2" style="color: #495057;">
-                                    <span class="text-break">Selected Vehicle:</span>
-                                    <span class="fw-bold text-end text-break" style="color: #33383c;">Jeep Renegade</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2 fs-13 gap-2" style="color: #495057;">
-                                    <span class="text-break">Duration:</span>
-                                    <span class="text-end text-break" style="color: #33383c;">8 Days</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-3 pb-3 border-bottom border-light fs-13 gap-2" style="color: #495057;">
-                                    <span class="text-break">Estimated Amount:</span>
-                                    <span class="fw-bold fs-14 text-end text-nowrap" style="color: #33383c;">$2,247.20</span>
-                                </div>
+                                @include('cars.partials.summary')
 
-                                <div class="alert bg-light border border-light rounded-2 p-3 fs-12 mb-4 text-break" style="color: #495057;">
-                                    <i class="fa fa-info-circle me-1" style="color: #e9993e;"></i> Make sure your personal contact information is correct. Our team will contact you based on the information provided.
-                                </div>
-
-                                <a href="{{ route('cars.finalreview') }}" class="btn btn-dark w-100 text-center border-0 py-3 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-decoration-none text-white d-flex align-items-center justify-content-center gap-2 text-break" style="color: #ffffff !important;">
-                                    <span>Confirm Detail</span> <i class="fa fa-paper-plane"></i>
-                                </a>
+                                <button type="submit" class="btn btn-dark w-100 text-center border-0 py-3 mt-4 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-white d-none d-xl-flex align-items-center justify-content-center gap-2">
+                                    <span>Send Booking Request</span> <i class="fa fa-paper-plane"></i>
+                                </button>
                             </div>
                         </div>
 
@@ -387,51 +252,37 @@
 
 </div>
 
-
-@if(!isset($isConfirmed) || !$isConfirmed)
+@if (!$isConfirmed)
 <div class="d-xl-none fixed-bottom bg-white border-top shadow-lg p-3 d-flex align-items-center justify-content-between gap-3" style="z-index: 1050;">
     <div class="min-w-0">
         <span class="text-uppercase fs-10 fw-bold tracking-wider d-block text-truncate" style="color: #6c757d;">Estimated Total</span>
-        <div class="fw-bold fs-18 text-truncate" style="color: #33383c;">$2,247.20</div>
+        <div class="fw-bold fs-18 text-truncate" style="color: #33383c;">RM {{ number_format($quote['total'], 2) }}</div>
     </div>
-    <a href="{{ route('cars.finalreview') }}" class="btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm text-decoration-none flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
-        <span>Confirm Detail</span> <i class="fa fa-paper-plane"></i>
-    </a>
+    <button type="submit" form="detailsForm" class="btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
+        <span>Send Request</span> <i class="fa fa-paper-plane"></i>
+    </button>
 </div>
 @endif
 
 @push('styles')
 <style>
-    .text-break {
-        word-break: break-word;
-        overflow-wrap: break-word;
-    }
-    .min-w-0 {
-        min-width: 0;
-    }
+    .text-break { word-break: break-word; overflow-wrap: break-word; }
+    .min-w-0 { min-width: 0; }
     .channel-card-num {
         cursor: pointer;
         transition: all 0.2s ease-in-out;
         background-color: #f8f9fa;
         border: 1px solid #dee2e6 !important;
     }
-    .channel-card-num:hover {
-        background-color: #e9ecef;
-        border-color: #adb5bd !important;
-    }
+    .channel-card-num:hover { background-color: #e9ecef; border-color: #adb5bd !important; }
     .channel-input:checked + .channel-card-num {
         background-color: #fffaf4 !important;
         border-color: #e9993e !important;
         box-shadow: 0 0 0 1px #e9993e;
     }
-    .channel-input:checked + .channel-card-num .num-box {
-        background-color: #e9993e;
-        color: #fff;
-        border-color: #e9993e;
-    }
-    .channel-input:checked + .channel-card-num .channel-title {
-        color: #e9993e;
-    }
+    .channel-input:checked + .channel-card-num .num-box { background-color: #e9993e; color: #fff; border-color: #e9993e; }
+    .channel-input:checked + .channel-card-num .channel-title { color: #e9993e; }
+    .channel-input:focus-visible + .channel-card-num { outline: 2px solid #e9993e; outline-offset: 2px; }
     .num-box {
         width: 32px;
         height: 32px;
@@ -442,21 +293,39 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 700;
         transition: all 0.2s ease;
     }
-
+    @media (max-width: 1199.98px) { #content { padding-bottom: 90px; } }
     @media (max-width: 575.98px) {
-        .card .px-2 {
-            padding-left: 0.5rem !important;
-            padding-right: 0.5rem !important;
-        }
-        .fs-sm-12 {
-            font-size: 10px !important;
-        }
+        .card .px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        .fs-sm-12 { font-size: 10px !important; }
     }
 </style>
 @endpush
 
 @endsection
+
+@if (!$isConfirmed)
+    @section('scripts')
+    @include('partials.phone-input')
+    <script>
+    $(function () {
+        const phone = initPhoneInput('#phone_number_display', '#phone_number', '#phone_number-error');
+
+        // Block sending with an invalid phone number (the server checks again)
+        window.validateDetails = function () {
+            const error = phone.validate();
+            if (error) {
+                phone.setError(error);
+                $('#phone_number_display').trigger('focus');
+                return false;
+            }
+            if (typeof showLoading === 'function') showLoading();
+            return true;
+        };
+    });
+    </script>
+    @endsection
+@endif

@@ -42,7 +42,9 @@
                         <ul id="mainmenu">
                             <li><a class="menu-item" href="/">Home</a></li>
                             <li><a class="menu-item" href="/aboutus">About Us</a></li>
-                            <li><a class="menu-item" href="/cars/index">Cars</a></li>
+                            <li><a class="menu-item" href="{{ route('cars.index') }}">Cars</a></li>
+                            <li><a class="menu-item" href="{{ route('homestays.index') }}">HomeStay</a></li>
+                            <li><a class="menu-item" href="{{ route('tours.index') }}">Tours</a></li>
                             <li><a class="menu-item" href="/myaccount">My Account</a></li>
                             <li><a class="menu-item" href="/contact">Contact Us</a>
                         </ul>

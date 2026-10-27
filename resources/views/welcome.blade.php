@@ -15,189 +15,105 @@
                 <div class="col-lg-12 text-light">
                     <div class="spacer-double"></div>
                     <div class="spacer-double"></div>
-                    <h1 class="mb-2">Looking for a <span class="id-color">vehicle in Kuching</span>? You're at the right place.</h1>
-                    <div class="spacer-single"></div>
+                    {{-- Hidden on phones so the search box moves up into this space --}}
+                    <div class="d-none d-lg-block">
+                        <h1 class="mb-2">Looking for a <span class="id-color">vehicle in Kuching</span>? You're at the right place.</h1>
+                        <div class="spacer-single"></div>
+                    </div>
                 </div>
 
                 <div class="col-lg-12">
                     <div class="spacer-single sm-hide"></div>
-                    <div class="p-4 rounded-3 shadow-soft" data-bgcolor="#ffffff">
-                        
+                    <div class="p-4 rounded-3 shadow-soft" data-bgcolor="#ffffff" id="vehicle-search">
+                        @php
+                            $vehicleType = old('vehicle_type', 'car_bike');
+                            $fieldError = fn(...$keys) => collect($keys)->map(fn($key) => $errors->first($key))->filter()->first();
+                        @endphp
 
-                        <form name="contactForm" id='contact_form' method="post">
-                            <div id="step-1" class="row">
-                                <div class="col-lg-6 mb30">
-                                    <h5>What is your vehicle type?</h5>
-
-                                    <div class="de_form de_radio row g-3">
-                                        <div class="radio-img col-lg-3 col-sm-3 col-6">
-                                            <input id="radio-1a" name="Car_Type" type="radio" value="Residential" checked="checked">
-                                            <label for="radio-1a"><img src="images/select-form/car.png" alt="">Car</label>
+                        <form name="vehicleSearchForm" id="vehicle-search-form" action="{{ route('cars.search') }}" method="post" novalidate autocomplete="off">
+                            @csrf
+                            <div class="row g-4">
+                                {{-- Car/Bike and Bus search below; HomeStay and Tour go to their own pages --}}
+                                <div class="col-lg-6">
+                                    <h5 class="search-heading">What are you looking for?</h5>
+                                    <div class="row g-3">
+                                        @foreach (['car_bike' => ['Car/Bike', ['fa-car', 'fa-motorcycle']], 'bus' => ['Bus', ['fa-bus']]] as $value => [$label, $icons])
+                                            <div class="col-3">
+                                                <input type="radio" class="tile-input visually-hidden" name="vehicle_type" id="vehicle_type_{{ $value }}" value="{{ $value }}" {{ $vehicleType === $value ? 'checked' : '' }}>
+                                                <label class="look-tile" for="vehicle_type_{{ $value }}">
+                                                    <span class="look-tile-icons">@foreach ($icons as $icon)<i class="fa {{ $icon }}" aria-hidden="true"></i>@endforeach</span>
+                                                    <span>{{ $label }}</span>
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                        <div class="col-3">
+                                            <a href="{{ route('homestays.index') }}" class="look-tile">
+                                                <span class="look-tile-icons"><i class="fa fa-home" aria-hidden="true"></i></span>
+                                                <span>HomeStay</span>
+                                            </a>
                                         </div>
-
-                                        <div class="radio-img col-lg-3 col-sm-3 col-6">
-                                            <input id="radio-1b" name="Car_Type" type="radio" value="Office">
-                                            <label for="radio-1b"><img src="images/select-form/van.png" alt="">Van</label>
-                                        </div>
-
-                                        <div class="radio-img col-lg-3 col-sm-3 col-6">
-                                            <input id="radio-1c" name="Car_Type" type="radio" value="Commercial">
-                                            <label for="radio-1c"><img src="images/select-form/minibus.png" alt="">Minibus</label>
-                                        </div>
-
-                                        <div class="radio-img col-lg-3 col-sm-3 col-6">
-                                            <input id="radio-1d" name="Car_Type" type="radio" value="Retail">
-                                            <label for="radio-1d"><img src="images/select-form/sportscar.png" alt="">Prestige</label>
+                                        <div class="col-3">
+                                            <a href="{{ route('tours.index') }}" class="look-tile">
+                                                <span class="look-tile-icons"><i class="fa fa-compass" aria-hidden="true"></i></span>
+                                                <span>Tour</span>
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="col-lg-6">
-                                    <div class="row">
-                                        <div class="col-lg-6 mb20">
-                                            <h5>Pick Up Location</h5>
-                                            <input type="text" name="PickupLocation" onfocus="geolocate()" placeholder="Enter your pickup location" id="autocomplete" autocomplete="off" class="form-control">
-
-                                            <div class="jls-address-preview jls-address-preview--hidden">
-                                                <div class="jls-address-preview__header">
+                                    <div class="row g-3">
+                                        @foreach (['pickup' => ['Pick Up Location', 'Enter your pickup location'], 'return' => ['Drop Off Location', 'Enter your dropoff location']] as $side => [$label, $placeholder])
+                                            @php $error = $fieldError($side . '_location_id', $side . '_address', $side . '_place'); @endphp
+                                            <div class="col-md-6">
+                                                <label class="search-label" for="search_{{ $side }}_place">{{ $label }}</label>
+                                                <div class="place-field">
+                                                    <input type="text" name="{{ $side }}_place" id="search_{{ $side }}_place" class="form-control search-input place-input {{ $error ? 'is-invalid' : '' }}"
+                                                           value="{{ old($side . '_place', $schedule[$side . '_place'] ?? '') }}" placeholder="{{ $placeholder }}"
+                                                           role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search_{{ $side }}_suggestions">
+                                                    <ul class="place-suggestions" id="search_{{ $side }}_suggestions" role="listbox" hidden></ul>
                                                 </div>
+                                                @if ($error)
+                                                    <small class="search-error">{{ $error }}</small>
+                                                @elseif ($side === 'return')
+                                                    <button type="button" class="same-as-pickup" id="same-as-pickup">Same as pick-up location</button>
+                                                @endif
                                             </div>
-                                        </div>
+                                        @endforeach
 
-                                        <div class="col-lg-6 mb20">
-                                            <h5>Drop Off Location</h5>
-                                            <input type="text" name="DropoffLocation" onfocus="geolocate()" placeholder="Enter your dropoff location" id="autocomplete2" autocomplete="off" class="form-control">
-
-                                            <div class="jls-address-preview jls-address-preview--hidden">
-                                                <div class="jls-address-preview__header">
+                                        @foreach (['pickup' => 'Pick Up Date & Time', 'return' => 'Return Date & Time'] as $side => $label)
+                                            @php
+                                                $dateValue = old($side . '_date', $schedule[$side . '_date'] ?? '');
+                                                $timeValue = old($side . '_time', $schedule[$side . '_time'] ?? '');
+                                                $error = $fieldError($side . '_date', $side . '_time');
+                                            @endphp
+                                            <div class="col-md-6">
+                                                <label class="search-label" for="search_{{ $side }}_date_display">{{ $label }}</label>
+                                                <div class="input-group date-time-group">
+                                                    {{-- Shown as "October 13, 2026"; the hidden field sends 2026-10-13 --}}
+                                                    <input type="text" id="search_{{ $side }}_date_display" class="form-control search-input search-date {{ $error ? 'is-invalid' : '' }}" data-target="search_{{ $side }}_date"
+                                                           value="{{ $dateValue ? \Carbon\Carbon::parse($dateValue)->format('F j, Y') : '' }}" readonly>
+                                                    <input type="hidden" name="{{ $side }}_date" id="search_{{ $side }}_date" value="{{ $dateValue }}">
+                                                    <label class="visually-hidden" for="search_{{ $side }}_time">{{ $label }}: time</label>
+                                                    <select name="{{ $side }}_time" id="search_{{ $side }}_time" class="form-select search-input search-time {{ $error ? 'is-invalid' : '' }}">
+                                                        <option value="" disabled {{ $timeValue ? '' : 'selected' }}>Time</option>
+                                                        @foreach ($timeSlots as $slot)
+                                                            <option value="{{ $slot }}" {{ $timeValue === $slot ? 'selected' : '' }}>{{ $slot }}</option>
+                                                        @endforeach
+                                                    </select>
                                                 </div>
+                                                @if ($error)
+                                                    <small class="search-error">{{ $error }}</small>
+                                                @endif
                                             </div>
-                                        </div>
+                                        @endforeach
 
-                                        <div class="col-lg-6 mb20">
-                                            <h5>Pick Up Date & Time</h5>
-                                            <div class="date-time-field">
-                                                <input type="text" id="date-picker" name="Pick Up Date" value="">
-                                                <select name="Pick Up Time" id="pickup-time">
-                                                    <option selected disabled value="Select time">Time</option>
-                                                    <option value="00:00">00:00</option>
-                                                    <option value="00:30">00:30</option>
-                                                    <option value="01:00">01:00</option>
-                                                    <option value="01:30">01:30</option>
-                                                    <option value="02:00">02:00</option>
-                                                    <option value="02:30">02:30</option>
-                                                    <option value="03:00">03:00</option>
-                                                    <option value="03:30">03:30</option>
-                                                    <option value="04:00">04:00</option>
-                                                    <option value="04:30">04:30</option>
-                                                    <option value="05:00">05:00</option>
-                                                    <option value="05:30">05:30</option>
-                                                    <option value="06:00">06:00</option>
-                                                    <option value="06:30">06:30</option>
-                                                    <option value="07:00">07:00</option>
-                                                    <option value="07:30">07:30</option>
-                                                    <option value="08:00">08:00</option>
-                                                    <option value="08:30">08:30</option>
-                                                    <option value="09:00">09:00</option>
-                                                    <option value="09:30">09:30</option>
-                                                    <option value="10:00">10:00</option>
-                                                    <option value="10:30">10:30</option>
-                                                    <option value="11:00">11:00</option>
-                                                    <option value="11:30">11:30</option>
-                                                    <option value="12:00">12:00</option>
-                                                    <option value="12:30">12:30</option>
-                                                    <option value="13:00">13:00</option>
-                                                    <option value="13:30">13:30</option>
-                                                    <option value="14:00">14:00</option>
-                                                    <option value="14:30">14:30</option>
-                                                    <option value="15:00">15:00</option>
-                                                    <option value="15:30">15:30</option>
-                                                    <option value="16:00">16:00</option>
-                                                    <option value="16:30">16:30</option>
-                                                    <option value="17:00">17:00</option>
-                                                    <option value="17:30">17:30</option>
-                                                    <option value="18:00">18:00</option>
-                                                    <option value="18:30">18:30</option>
-                                                    <option value="19:00">19:00</option>
-                                                    <option value="19:30">19:30</option>
-                                                    <option value="20:00">20:00</option>
-                                                    <option value="20:30">20:30</option>
-                                                    <option value="21:00">21:00</option>
-                                                    <option value="21:30">21:30</option>
-                                                    <option value="22:00">22:00</option>
-                                                    <option value="22:30">22:30</option>
-                                                    <option value="23:00">23:00</option>
-                                                    <option value="23:30">23:30</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-lg-6 mb20">
-                                            <h5>Return Date & Time</h5>
-                                            <div class="date-time-field">
-                                                <input type="text" id="date-picker-2" name="Collection Date" value="">
-                                                <select name="Collection Time" id="collection-time">
-                                                    <option selected disabled value="Select time">Time</option>
-                                                    <option value="00:00">00:00</option>
-                                                    <option value="00:30">00:30</option>
-                                                    <option value="01:00">01:00</option>
-                                                    <option value="01:30">01:30</option>
-                                                    <option value="02:00">02:00</option>
-                                                    <option value="02:30">02:30</option>
-                                                    <option value="03:00">03:00</option>
-                                                    <option value="03:30">03:30</option>
-                                                    <option value="04:00">04:00</option>
-                                                    <option value="04:30">04:30</option>
-                                                    <option value="05:00">05:00</option>
-                                                    <option value="05:30">05:30</option>
-                                                    <option value="06:00">06:00</option>
-                                                    <option value="06:30">06:30</option>
-                                                    <option value="07:00">07:00</option>
-                                                    <option value="07:30">07:30</option>
-                                                    <option value="08:00">08:00</option>
-                                                    <option value="08:30">08:30</option>
-                                                    <option value="09:00">09:00</option>
-                                                    <option value="09:30">09:30</option>
-                                                    <option value="10:00">10:00</option>
-                                                    <option value="10:30">10:30</option>
-                                                    <option value="11:00">11:00</option>
-                                                    <option value="11:30">11:30</option>
-                                                    <option value="12:00">12:00</option>
-                                                    <option value="12:30">12:30</option>
-                                                    <option value="13:00">13:00</option>
-                                                    <option value="13:30">13:30</option>
-                                                    <option value="14:00">14:00</option>
-                                                    <option value="14:30">14:30</option>
-                                                    <option value="15:00">15:00</option>
-                                                    <option value="15:30">15:30</option>
-                                                    <option value="16:00">16:00</option>
-                                                    <option value="16:30">16:30</option>
-                                                    <option value="17:00">17:00</option>
-                                                    <option value="17:30">17:30</option>
-                                                    <option value="18:00">18:00</option>
-                                                    <option value="18:30">18:30</option>
-                                                    <option value="19:00">19:00</option>
-                                                    <option value="19:30">19:30</option>
-                                                    <option value="20:00">20:00</option>
-                                                    <option value="20:30">20:30</option>
-                                                    <option value="21:00">21:00</option>
-                                                    <option value="21:30">21:30</option>
-                                                    <option value="22:00">22:00</option>
-                                                    <option value="22:30">22:30</option>
-                                                    <option value="23:00">23:00</option>
-                                                    <option value="23:30">23:30</option>
-                                                </select>
-                                            </div>
+                                        <div class="col-12 d-flex justify-content-end">
+                                            <button type="submit" id="find-vehicle" class="btn-main">Find a Vehicle</button>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div class="col-lg-12">
-                                    <input type='submit' id='send_message' value='Find a Vehicle' class="btn-main pull-right">
-                                </div>
-
                             </div>
-                            
                         </form>
                     </div>
                 </div>
@@ -605,4 +521,242 @@
 </div>
 <!-- content close -->
 
+@push('styles')
+<style>
+    #vehicle-search .search-heading,
+    #vehicle-search .search-label { display: block; font-size: 15px; font-weight: 700; color: #1f2a44; margin-bottom: 14px; }
+    #vehicle-search .search-label { margin-bottom: 8px; }
+
+    /* Tiles: red, the chosen one dark red */
+    #vehicle-search .look-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        height: 112px;
+        margin: 0;
+        border-radius: 8px;
+        background: var(--primary-color);
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 15px;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color .15s ease-in-out;
+    }
+    #vehicle-search .look-tile:hover { background: #c4161d; }
+    #vehicle-search .look-tile-icons { font-size: 26px; line-height: 1; display: inline-flex; align-items: center; gap: 10px; }
+    #vehicle-search .look-tile-icons .fa-motorcycle { font-size: 20px; }
+    #vehicle-search .tile-input:checked + .look-tile { background: #3d0507; }
+    #vehicle-search .tile-input:focus-visible + .look-tile,
+    #vehicle-search a.look-tile:focus-visible { outline: 3px solid #1f2a44; outline-offset: 2px; }
+
+    /* Fields */
+    #vehicle-search .search-input { height: 40px; font-size: 15px; border-color: #c9ccd3; color: #1f2a44; }
+    #vehicle-search .search-input::placeholder { color: #8a8f99; }
+    #vehicle-search .search-date { background-color: #ffffff; cursor: pointer; }
+    #vehicle-search .search-time { flex: 0 0 88px; max-width: 88px; }
+    #vehicle-search .search-error { display: block; color: #dc3545; font-size: 12px; margin-top: 4px; }
+    #vehicle-search .same-as-pickup { background: none; border: 0; padding: 0; margin: 6px 0 0 20px; font-size: 12px; color: #6c757d; }
+    #vehicle-search .same-as-pickup:hover { color: #1f2a44; text-decoration: underline; }
+    #vehicle-search #find-vehicle { border: 0; padding: 8px 30px; }
+
+    /* Location suggestions */
+    #vehicle-search .place-field { position: relative; }
+    #vehicle-search .place-suggestions {
+        position: absolute;
+        z-index: 1050;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        max-height: 280px;
+        overflow-y: auto;
+        margin: 0;
+        padding: 6px 0;
+        list-style: none;
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+    }
+    #vehicle-search .place-suggestions .group-label { padding: 6px 12px 2px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #8a8f99; }
+    #vehicle-search .place-suggestions .option { padding: 7px 12px; font-size: 13px; color: #1f2a44; cursor: pointer; display: flex; gap: 8px; align-items: baseline; }
+    #vehicle-search .place-suggestions .option i { color: var(--primary-color); width: 12px; }
+    #vehicle-search .place-suggestions .option.active,
+    #vehicle-search .place-suggestions .option:hover { background: #f3f4f6; }
+
+    @media (max-width: 575.98px) {
+        #vehicle-search .row.g-3 > .col-3 { padding-left: 4px; padding-right: 4px; }
+        #vehicle-search .look-tile { height: 84px; font-size: 12px; gap: 6px; }
+        #vehicle-search .look-tile-icons { font-size: 20px; gap: 6px; }
+        #vehicle-search .look-tile-icons .fa-motorcycle { font-size: 15px; }
+    }
+</style>
+@endpush
+
+@endsection
+
+@section('scripts')
+<script>
+$(function () {
+    // ---- Dates: "October 13, 2026" on screen, 2026-10-13 in the hidden field ----------
+    function initDate($display, onPick) {
+        const $hidden = $('#' + $display.data('target'));
+        const start = $hidden.val() ? moment($hidden.val(), 'YYYY-MM-DD') : moment().add(1, 'day');
+        $display.daterangepicker({
+            singleDatePicker: true,
+            autoApply: true,
+            minDate: moment().startOf('day'),
+            startDate: start,
+            opens: 'left',
+            locale: { format: 'MMMM D, YYYY', firstDay: 1 }
+        }, function (picked) {
+            $hidden.val(picked.format('YYYY-MM-DD'));
+            if (onPick) onPick(picked);
+        });
+        if (!$hidden.val()) $hidden.val(start.format('YYYY-MM-DD'));
+    }
+
+    const $pickupDate = $('#search_pickup_date_display');
+    const $returnDate = $('#search_return_date_display');
+    if ($.fn.daterangepicker && window.moment) {
+        initDate($returnDate);
+        // Return can't be before pick-up
+        initDate($pickupDate, function (picked) {
+            const picker = $returnDate.data('daterangepicker');
+            picker.minDate = picked.clone();
+            if (picker.startDate.isBefore(picked, 'day')) {
+                picker.setStartDate(picked);
+                picker.setEndDate(picked);
+                $('#search_return_date').val(picked.format('YYYY-MM-DD'));
+            }
+        });
+    }
+
+    // ---- Locations: our branches first, then Google addresses ----------------------------
+    // A branch name is sent as that branch; anything else is treated as an address.
+    const branches = @json($locations->map(fn($location) => ['name' => $location->name, 'airport' => (bool) $location->is_airport])->values());
+    let googleReady = null; // Promise of the Places library, or false when Google is unavailable
+    let sessionToken = null;
+
+    function loadGoogle() {
+        if (googleReady !== null) return googleReady;
+        if (!(window.google && google.maps)) return Promise.resolve(null);
+        googleReady = (google.maps.importLibrary ? google.maps.importLibrary('places') : Promise.resolve(google.maps.places))
+            .then(function (places) { return places && places.AutocompleteSuggestion ? places : null; })
+            .catch(function () { return null; });
+        return googleReady;
+    }
+    // Key rejected / API off: keep branch suggestions and free typing only
+    const previousAuthFailure = window.gm_authFailure;
+    window.gm_authFailure = function () {
+        googleReady = Promise.resolve(null);
+        if (previousAuthFailure) previousAuthFailure();
+    };
+
+    function escapeHtml(text) {
+        return $('<div>').text(text).html();
+    }
+
+    $('.place-input').each(function () {
+        const $input = $(this);
+        const $list = $('#' + $input.attr('aria-controls'));
+        let timer = null;
+        let requestId = 0;
+
+        function close() {
+            $list.prop('hidden', true).empty();
+            $input.attr('aria-expanded', 'false');
+        }
+
+        function render(branchMatches, addresses) {
+            let html = '';
+            if (branchMatches.length) {
+                html += '<li class="group-label" role="presentation">Our locations</li>';
+                branchMatches.forEach(function (branch) {
+                    html += '<li class="option" role="option" data-value="' + escapeHtml(branch.name) + '"><i class="fa ' + (branch.airport ? 'fa-plane' : 'fa-map-marker') + '"></i><span>' + escapeHtml(branch.name) + '</span></li>';
+                });
+            }
+            if (addresses.length) {
+                html += '<li class="group-label" role="presentation">Addresses</li>';
+                addresses.forEach(function (address) {
+                    html += '<li class="option" role="option" data-value="' + escapeHtml(address) + '"><i class="fa fa-location-arrow"></i><span>' + escapeHtml(address) + '</span></li>';
+                });
+            }
+            if (!html) return close();
+            $list.html(html).prop('hidden', false);
+            $input.attr('aria-expanded', 'true');
+        }
+
+        function suggest() {
+            const text = $input.val().trim().toLowerCase();
+            const branchMatches = branches.filter(function (branch) {
+                return !text || branch.name.toLowerCase().indexOf(text) !== -1;
+            });
+            render(branchMatches, []);
+            if (text.length < 3) return;
+
+            const thisRequest = ++requestId;
+            loadGoogle().then(function (places) {
+                if (!places) return;
+                sessionToken = sessionToken || new places.AutocompleteSessionToken();
+                return places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+                    input: $input.val().trim(),
+                    includedRegionCodes: ['my'],
+                    sessionToken: sessionToken
+                }).then(function (response) {
+                    if (thisRequest !== requestId) return; // a newer search is on its way
+                    const addresses = (response.suggestions || [])
+                        .filter(function (s) { return s.placePrediction; })
+                        .map(function (s) { return s.placePrediction.text.toString(); })
+                        .slice(0, 5);
+                    render(branchMatches, addresses);
+                });
+            }).catch(function () {
+                googleReady = Promise.resolve(null);
+            });
+        }
+
+        function choose(value) {
+            $input.val(value).removeClass('is-invalid');
+            sessionToken = null; // one Google session per chosen address
+            close();
+        }
+
+        $input.on('focus', suggest);
+        $input.on('input', function () {
+            clearTimeout(timer);
+            timer = setTimeout(suggest, 250);
+        });
+        $input.on('keydown', function (event) {
+            const $options = $list.find('.option');
+            if ($list.prop('hidden') || !$options.length) return;
+            let index = $options.index($options.filter('.active'));
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                index = event.key === 'ArrowDown' ? Math.min(index + 1, $options.length - 1) : Math.max(index - 1, 0);
+                $options.removeClass('active').eq(index).addClass('active')[0].scrollIntoView({ block: 'nearest' });
+            } else if (event.key === 'Enter' && index >= 0) {
+                event.preventDefault();
+                choose($options.eq(index).data('value'));
+            } else if (event.key === 'Escape') {
+                close();
+            }
+        });
+        // mousedown so the choice lands before the input loses focus
+        $list.on('mousedown', '.option', function (event) {
+            event.preventDefault();
+            choose($(this).data('value'));
+        });
+        $input.on('blur', function () { setTimeout(close, 150); });
+    });
+
+    // Drop-off: copy the pick-up place (an empty drop-off also means the same place)
+    $('#same-as-pickup').on('click', function () {
+        $('#search_return_place').val($('#search_pickup_place').val()).trigger('focus');
+    });
+});
+</script>
 @endsection

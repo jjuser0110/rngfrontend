@@ -36,10 +36,13 @@ return [
             'throw' => false,
         ],
 
+        // Media (vehicle photos, customer documents) is shared with rngcarrental: both apps write the same
+        // media table, so they must use the same folder and links.
+        // SHARED_STORAGE_PATH = rngcarrental's storage/app/public; SHARED_STORAGE_URL = rngcarrental's APP_URL/storage.
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            'root' => env('SHARED_STORAGE_PATH', storage_path('app/public')),
+            'url' => env('SHARED_STORAGE_URL', env('APP_URL').'/storage'),
             'visibility' => 'public',
             'throw' => false,
         ],
@@ -70,7 +73,7 @@ return [
     */
 
     'links' => [
-        public_path('storage') => storage_path('app/public'),
+        public_path('storage') => env('SHARED_STORAGE_PATH', storage_path('app/public')),
     ],
 
 ];
