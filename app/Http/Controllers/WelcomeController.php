@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Customer;
+use App\Models\Reservation;
+use App\Models\VehicleModel;
 use App\Models\TemporaryUpload;
 use App\Rules\PhoneNumber;
 use App\Services\BookingQuote;
@@ -43,6 +45,13 @@ class WelcomeController extends Controller
             'locations' => $locations,
             'timeSlots' => BookingQuote::timeSlots(),
             'schedule'  => $schedule + ['pickup_place' => $placeOf('pickup'), 'return_place' => $placeOf('return')],
+            // "Our Vehicles": models open for online booking (rngcarrental: Show on Frontend = Yes)
+            'homeVehicles' => VehicleModel::shownOnFrontend()
+                ->whereNotNull('vehicle_class_id')
+                ->with(['vehicleClass', 'media'])
+                ->orderBy('name')
+                ->take(8)
+                ->get(),
         ]);
     }
 
@@ -62,7 +71,24 @@ class WelcomeController extends Controller
 
         $customer = Customer::where('id', $user->customer_id)->first();
 
-        return view('myaccount', compact('customer'));
+        // The customer's bookings (web requests and ones made by staff), newest pick-up first; read only
+        $bookings = $customer
+            ? Reservation::where('customer_id', $customer->id)
+                ->with(['vehicleModel.media', 'vehicleClass', 'pickupLocation', 'returnLocation'])
+                ->orderByDesc('pickup_date')
+                ->orderByDesc('pickup_time')
+                ->get()
+            : collect();
+
+        $today = now()->toDateString();
+        $bookingCounts = [
+            'requests'  => $bookings->whereIn('status', ['Pending', 'Quote'])->count(),
+            'upcoming'  => $bookings->whereIn('status', ['Open', 'Rental'])->filter(fn($booking) => $booking->return_date >= $today)->count(),
+            'completed' => $bookings->where('status', 'Completed')->count(),
+            'cancelled' => $bookings->where('status', 'Cancelled')->count(),
+        ];
+
+        return view('myaccount', compact('customer', 'bookings', 'bookingCounts'));
     }
 
     public function updateProfile(Request $request)

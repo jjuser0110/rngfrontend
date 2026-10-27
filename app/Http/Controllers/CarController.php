@@ -12,6 +12,7 @@ use App\Support\WhatsApp;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -27,6 +28,13 @@ class CarController extends Controller
     /** Website models, no availability check. Open to guests. */
     public function index(Request $request)
     {
+        // Menu links ("Cars", "Rent Now") start a new booking; links inside the booking flow keep it
+        if ($request->boolean('new')) {
+            session()->forget(self::SESSION_KEY);
+
+            return redirect()->route('cars.index', $request->except('new'));
+        }
+
         $vehicleModels = VehicleModel::shownOnFrontend()
             ->whereNotNull('vehicle_class_id')
             ->with(['vehicleClass', 'media'])
@@ -216,7 +224,28 @@ class CarController extends Controller
 
     public function submit(Request $request)
     {
+        // One send at a time per customer, so a double click or a resent form can't create two bookings
+        $lock = Cache::lock('booking-submit:' . Auth::id(), 30);
+        if (!$lock->get()) {
+            return back()->withErrors('Your booking request is already being sent. Please wait a moment.');
+        }
+
+        try {
+            return $this->sendBookingRequest($request);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function sendBookingRequest(Request $request)
+    {
         $draft = session(self::SESSION_KEY, []);
+
+        // Already sent (e.g. the browser resent the form): show that request instead of an error
+        if (empty($draft) && session('booking_sent')) {
+            return redirect()->route('cars.confirmed', session('booking_sent'));
+        }
+
         $vehicleModel = $this->draftVehicleModel($draft);
         if (!$vehicleModel || empty($draft['cart_done'])) {
             return redirect()->route($vehicleModel ? 'cars.cart' : 'cars.index')
@@ -229,11 +258,8 @@ class CarController extends Controller
         }
 
         $validated = $request->validate([
-            'phone_number'       => ['required', 'string', 'max:20', new PhoneNumber],
-            'customer_notes'     => 'nullable|string|max:1000',
-            'contact_preference' => 'required|in:email,whatsapp,phone',
-        ], [
-            'contact_preference.required' => 'Please choose how we should contact you.',
+            'phone_number'   => ['required', 'string', 'max:20', new PhoneNumber],
+            'customer_notes' => 'nullable|string|max:1000',
         ]);
 
         // The schedule may have gone stale while the customer filled in details (e.g. pickup time passed)
@@ -285,8 +311,7 @@ class CarController extends Controller
             }
 
             // Shown to staff in the reservation's comments
-            $preference = ['email' => 'Email', 'whatsapp' => 'WhatsApp', 'phone' => 'Phone call'][$validated['contact_preference']];
-            $note = 'Booked on the website. Preferred contact: ' . $preference . '.';
+            $note = 'Booked on the website.';
             if (!empty($validated['customer_notes'])) {
                 $note .= "\nCustomer note: " . $validated['customer_notes'];
             }
@@ -300,6 +325,7 @@ class CarController extends Controller
         });
 
         session()->forget(self::SESSION_KEY);
+        session(['booking_sent' => $reservation->id]);
 
         return redirect()->route('cars.confirmed', $reservation);
     }

@@ -2,23 +2,33 @@
 <header class="transparent scroll-light has-topbar">
     <div id="topbar" class="topbar-dark text-light">
         <div class="container">
+            {{-- Contact details from the company record and config/site.php; empty ones are hidden --}}
             <div class="topbar-left xs-hide">
                 <div class="topbar-widget">
-                    <div class="topbar-widget"><a href="#"><i class="fa fa-phone"></i>+208 333 9296</a></div>
-                    <div class="topbar-widget"><a href="#"><i class="fa fa-envelope"></i>contact@rentaly.com</a></div>
-                    <div class="topbar-widget"><a href="#"><i class="fa fa-clock-o"></i>Mon - Fri 08.00 - 18.00</a></div>
+                    @if ($site['phone'])
+                        <div class="topbar-widget"><a href="{{ $site['phone_link'] }}"><i class="fa fa-phone"></i>{{ $site['phone'] }}</a></div>
+                    @endif
+                    @if ($site['whatsapp'])
+                        <div class="topbar-widget"><a href="{{ \App\Support\WhatsApp::link() }}" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i>{{ $site['whatsapp'] }}</a></div>
+                    @endif
+                    @if ($site['email'])
+                        <div class="topbar-widget"><a href="mailto:{{ $site['email'] }}"><i class="fa fa-envelope"></i>{{ $site['email'] }}</a></div>
+                    @endif
+                    @if ($site['hours'])
+                        <div class="topbar-widget"><span><i class="fa fa-clock-o"></i>{{ $site['hours'] }}</span></div>
+                    @endif
                 </div>
             </div>
-        
-            <div class="topbar-right">
-                <div class="social-icons">
-                    <a href="#"><i class="fa fa-facebook fa-lg"></i></a>
-                    <a href="#"><i class="fa fa-twitter fa-lg"></i></a>
-                    <a href="#"><i class="fa fa-youtube fa-lg"></i></a>
-                    <a href="#"><i class="fa fa-pinterest fa-lg"></i></a>
-                    <a href="#"><i class="fa fa-instagram fa-lg"></i></a>
+
+            @if ($site['social'])
+                <div class="topbar-right">
+                    <div class="social-icons">
+                        @foreach ($site['social'] as $network => $url)
+                            <a href="{{ $url }}" target="_blank" rel="noopener" aria-label="{{ ucfirst($network) }}"><i class="fa fa-{{ $network }} fa-lg"></i></a>
+                        @endforeach
+                    </div>
                 </div>
-            </div>  
+            @endif
             <div class="clearfix"></div>
         </div>
     </div>
@@ -42,7 +52,7 @@
                         <ul id="mainmenu">
                             <li><a class="menu-item" href="/">Home</a></li>
                             <li><a class="menu-item" href="/aboutus">About Us</a></li>
-                            <li><a class="menu-item" href="{{ route('cars.index') }}">Cars</a></li>
+                            <li><a class="menu-item" href="{{ route('cars.index', ['new' => 1]) }}">Cars</a></li>
                             <li><a class="menu-item" href="{{ route('homestays.index') }}">HomeStay</a></li>
                             <li><a class="menu-item" href="{{ route('tours.index') }}">Tours</a></li>
                             <li><a class="menu-item" href="/myaccount">My Account</a></li>
@@ -51,7 +61,8 @@
                     </div>
                     <div class="de-flex-col">
                         <div class="menu_side_area">
-                            @if(Auth::guard('customer')->check())
+                            {{-- Customers log in through the default (web) guard --}}
+                            @if(Auth::check())
                                 <a href="{{ route('logout') }}"
                                 class="btn-main"
                                 onclick="event.preventDefault(); document.getElementById('logout-form').submit();">

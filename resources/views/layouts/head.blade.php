@@ -20,5 +20,7 @@
 
 {{-- Color Scheme --}}
 <link id="colors" href="{{ asset('css/colors/scheme-01.css') }}" rel="stylesheet" type="text/css">
+{{-- Site-wide helpers (font sizes, text wrapping) the theme lacks --}}
+<link href="{{ asset('css/rng-helpers.css') }}?v={{ filemtime(public_path('css/rng-helpers.css')) }}" rel="stylesheet" type="text/css">
 
 @stack('styles')

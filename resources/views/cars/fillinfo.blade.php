@@ -22,7 +22,7 @@
     $imageUrl = $image ? $image->getUrl() : asset('images/cars/jeep-renegade.jpg');
 @endphp
 
-<div class="no-bottom no-top zebra pb-5 mb-5" id="content">
+<div class="no-bottom no-top listing-page booking-page pb-5 mb-5" id="content">
     <div id="top"></div>
 
     <section id="subheader" class="jarallax text-light py-4 py-md-5">
@@ -53,98 +53,122 @@
             @include('layouts.flash-message')
 
             @if ($isConfirmed)
+                @php
+                    $whatsappLink = \App\Support\WhatsApp::link("Hi, I have a question about my booking request {$reservation->code}.");
+                    $nextSteps = [
+                        ['fa-search', 'We check the car', "Our team checks the car for your dates. If this model isn't available, we'll suggest a similar one."],
+                        ['fa-envelope-o', 'You get a quotation', "We email the final price and how to pay the deposit to {$customer->email}."],
+                        ['fa-id-card-o', 'Pick up your car', 'Bring your IC or passport and driving licence on the pick-up day.'],
+                    ];
+                @endphp
 
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="alert alert-success border-0 shadow-sm rounded-3 p-3 p-md-4 d-flex flex-column flex-sm-row align-items-sm-center gap-3 bg-white border-start border-4 border-success">
-                            <div class="fs-1 text-success flex-shrink-0"><i class="fa fa-check-circle"></i></div>
-                            <div class="min-w-0">
-                                <h4 class="fw-bold fs-16 mb-1 text-dark text-break">Thank you! Your booking request {{ $reservation->code }} has been sent.</h4>
-                                <p class="mb-0 text-muted fs-13 text-break">Our team will check the car and confirm your booking. You'll receive your quotation by email at <strong>{{ $customer->email }}</strong>.</p>
-                            </div>
-                        </div>
-                    </div>
+                {{-- Success --}}
+                <div class="card border border-light shadow-sm rounded-3 bg-white p-4 p-md-5 mb-4 text-center sent-hero">
+                    <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
+                    <h2 class="fw-bold fs-24 text-ink mb-2">Booking request sent</h2>
+                    <p class="fs-14 text-soft mb-3">Thank you, {{ $customer->first_name ?? 'we\'ve got it' }}! We'll email your quotation to <strong class="text-ink">{{ $customer->email }}</strong>.</p>
+                    <span class="booking-code"><span class="text-soft fw-normal me-1">Booking no.</span>{{ $reservation->code }}</span>
                 </div>
 
                 <div class="row g-4">
-                    <div class="col-xl-8 col-12">
-
-                        <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                            <div class="row g-4 align-items-center">
-                                <div class="col-lg-5 col-md-5 text-center">
-                                    <img src="{{ $imageUrl }}" class="img-fluid rounded-2 shadow-sm" alt="{{ $vehicleModel->name ?? '' }}" style="max-height: 180px; width: 100%; object-fit: cover;">
-                                </div>
-                                <div class="col-lg-7 col-md-7">
-                                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2 mb-2">
-                                        <div class="min-w-0">
-                                            <h4 class="fw-bold fs-18 mb-1 text-break" style="color: #33383c;">{{ $vehicleModel->name ?? '' }} <span class="fs-12 text-muted fw-normal d-block d-sm-inline">or similar</span></h4>
-                                            <span class="d-block fs-12 text-muted mb-2 text-break"><i class="fa fa-map-marker-alt me-1" style="color: #e9993e;"></i> {{ $pickupPlace }}</span>
-                                        </div>
-                                        <div class="text-start text-sm-end flex-shrink-0">
-                                            <span class="d-block text-uppercase fs-10 fw-bold text-muted">Estimated Total</span>
-                                            <span class="fw-bold fs-18" style="color: #e9993e;">RM {{ number_format($reservation->total_price, 2) }}</span>
-                                        </div>
+                    <div class="col-lg-8">
+                        {{-- Booking --}}
+                        <div class="card border border-light shadow-sm rounded-3 bg-white overflow-hidden mb-4">
+                            <div class="row g-0">
+                                <div class="col-md-5">
+                                    <div class="sent-photo h-100">
+                                        <img src="{{ $imageUrl }}" alt="{{ $vehicleModel->name ?? '' }}">
                                     </div>
-                                    <span class="badge bg-light text-dark border fs-11 p-2 rounded-2">Status: Waiting for confirmation</span>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="p-3 p-md-4">
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <h3 class="fw-bold fs-20 text-ink mb-0">{{ $vehicleModel->name ?? '' }}</h3>
+                                            <span class="fs-12 text-soft">or similar</span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2 mb-3">
+                                            @if ($vehicleModel?->vehicleClass)
+                                                <span class="chip">{{ $vehicleModel->vehicleClass->name }}</span>
+                                            @endif
+                                            <span class="status-pill"><i class="fa fa-clock-o me-1" aria-hidden="true"></i>Waiting for confirmation</span>
+                                        </div>
+
+                                        <ul class="trip-list list-unstyled mb-0">
+                                            <li>
+                                                <span class="trip-label">Pick up · {{ $pickupAt->format('D, j M Y • H:i') }}</span>
+                                                <span class="trip-place">{{ $pickupPlace }}</span>
+                                            </li>
+                                            <li>
+                                                <span class="trip-label">Drop off · {{ $returnAt->format('D, j M Y • H:i') }}</span>
+                                                <span class="trip-place">{{ $returnPlace }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                            <h5 class="fw-bold fs-15 mb-3 text-break" style="color: #33383c;"><i class="fa fa-list-ol me-2" style="color: #e9993e;"></i>What Happens Next</h5>
-                            <ol class="fs-13 text-secondary mb-0 d-flex flex-column gap-2 ps-3">
-                                <li class="text-break">Our team checks the car for your dates. If your model isn't available, we'll contact you to suggest a similar one.</li>
-                                <li class="text-break">We email your quotation to <strong>{{ $customer->email }}</strong>, with the final price and how to pay the deposit.</li>
-                                <li class="text-break">Bring your IC or passport and driving licence when you pick up the car.</li>
+                        {{-- What happens next --}}
+                        <div class="card border border-light shadow-sm rounded-3 bg-white p-3 p-md-4 mb-4">
+                            <h3 class="fw-bold fs-17 text-ink mb-3">What happens next</h3>
+                            <ol class="next-steps list-unstyled mb-0">
+                                @foreach ($nextSteps as $index => [$icon, $title, $text])
+                                    <li>
+                                        <span class="step-number">{{ $index + 1 }}</span>
+                                        <div>
+                                            <span class="d-block fw-bold fs-14 text-ink">{{ $title }}</span>
+                                            <span class="d-block fs-13 text-soft">{{ $text }}</span>
+                                        </div>
+                                    </li>
+                                @endforeach
                             </ol>
                         </div>
 
                         <div class="d-flex flex-column flex-sm-row gap-2">
-                            <a href="{{ route('cars.index') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white shadow-sm border-0 text-decoration-none">
-                                <i class="fa fa-car me-2"></i> Browse More Cars
-                            </a>
-                            <a href="{{ route('myaccount.index') }}" class="btn btn-outline-secondary px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-dark bg-white shadow-sm border text-decoration-none" style="border-color: #adb5bd !important;">
-                                My Account
-                            </a>
+                            <a href="{{ route('cars.index', ['new' => 1]) }}" class="btn-primary-action"><i class="fa fa-car me-2" aria-hidden="true"></i>Browse more cars</a>
+                            <a href="{{ route('myaccount.index') }}" class="btn-secondary-action">My account</a>
                         </div>
                     </div>
 
-                    <div class="col-xl-4 col-12">
-                        @include('cars.partials.schedule', ['pickupAt' => $pickupAt, 'returnAt' => $returnAt, 'pickupPlace' => $pickupPlace, 'returnPlace' => $returnPlace])
-
-                        <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                            <h5 class="fw-bold fs-15 mb-3 pb-2 border-bottom border-light text-break" style="color: #33383c;">Price Breakdown</h5>
-                            @foreach ($reservation->rateDetails as $rateDetail)
-                                @php $prefix = $rateDetail->airport ? 'airport_' : ''; @endphp
-                                @foreach (['months' => 'monthly_rate', 'days' => 'daily_rate', 'hours' => 'hourly_rate'] as $unit => $rateField)
-                                    @if ($rateDetail->$unit > 0)
-                                        <div class="d-flex justify-content-between mb-2 fs-13 text-secondary gap-2">
-                                            <span class="text-break">{{ $rateDetail->$unit }} {{ Str::plural(Str::singular($unit), $rateDetail->$unit) }} × RM {{ number_format($rateDetail->{$prefix . $rateField}, 2) }}</span>
-                                            <span class="fw-semibold text-dark text-nowrap">RM {{ number_format($rateDetail->{$prefix . $rateField} * $rateDetail->$unit, 2) }}</span>
-                                        </div>
-                                    @endif
+                    <div class="col-lg-4">
+                        {{-- Price --}}
+                        <div class="card border border-light shadow-sm rounded-3 bg-white p-3 p-md-4 mb-4">
+                            <h3 class="fw-bold fs-17 text-ink mb-3">Price breakdown</h3>
+                            <div class="price-lines">
+                                @foreach ($reservation->rateDetails as $rateDetail)
+                                    @php $prefix = $rateDetail->airport ? 'airport_' : ''; @endphp
+                                    @foreach (['months' => 'monthly_rate', 'days' => 'daily_rate', 'hours' => 'hourly_rate'] as $unit => $rateField)
+                                        @if ($rateDetail->$unit > 0)
+                                            <div>
+                                                <span>{{ $rateDetail->$unit }} {{ Str::plural(Str::singular($unit), $rateDetail->$unit) }} × RM {{ number_format($rateDetail->{$prefix . $rateField}, 2) }}</span>
+                                                <span>RM {{ number_format($rateDetail->{$prefix . $rateField} * $rateDetail->$unit, 2) }}</span>
+                                            </div>
+                                        @endif
+                                    @endforeach
                                 @endforeach
-                            @endforeach
-                            @foreach ($reservation->chargeDetails as $charge)
-                                <div class="d-flex justify-content-between mb-2 fs-13 text-secondary gap-2">
-                                    <span class="text-break">{{ $charge->quantity > 1 ? $charge->quantity . '× ' : '' }}{{ $charge->name }}</span>
-                                    <span class="fw-semibold text-dark text-nowrap">RM {{ number_format($charge->total_charge, 2) }}</span>
-                                </div>
-                            @endforeach
-                            <div class="d-flex justify-content-between pt-3 border-top border-light fs-14 fw-bold gap-2" style="color: #33383c;">
-                                <span class="text-break">Estimated Total:</span>
-                                <span style="color: #e9993e;" class="fs-16 text-nowrap">RM {{ number_format($reservation->total_price, 2) }}</span>
+                                @foreach ($reservation->chargeDetails as $charge)
+                                    <div>
+                                        <span>{{ $charge->quantity > 1 ? $charge->quantity . '× ' : '' }}{{ $charge->name }}</span>
+                                        <span>RM {{ number_format($charge->total_charge, 2) }}</span>
+                                    </div>
+                                @endforeach
                             </div>
-                            <p class="fs-11 text-muted mt-2 mb-0">Plus a refundable security deposit of RM {{ number_format($reservation->security_deposit, 2) }}.</p>
+                            <div class="rate-box d-flex justify-content-between align-items-center mt-3">
+                                <span class="fs-13 text-soft">Estimated total</span>
+                                <span class="fw-bold fs-20 text-ink">RM {{ number_format($reservation->total_price, 2) }}</span>
+                            </div>
+                            <p class="fs-12 text-soft mt-2 mb-0">Plus a refundable security deposit of RM {{ number_format($reservation->security_deposit, 2) }}. The final price is in your quotation.</p>
                         </div>
 
-                        @if ($whatsappNumber)
-                            <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white">
-                                <h5 class="fw-bold fs-15 mb-2 text-break" style="color: #33383c;">Questions?</h5>
-                                <p class="fs-12 text-muted mb-2">Chat with our customer service on WhatsApp. Quote your booking number {{ $reservation->code }}.</p>
-                                <span class="d-block fs-13 fw-bold text-dark text-break user-select-all"><i class="fa fa-whatsapp me-1" style="color: #25d366;"></i> {{ $whatsappNumber }}</span>
-                            </div>
-                        @endif
+                        {{-- Help --}}
+                        <div class="card border border-light shadow-sm rounded-3 bg-white p-3 p-md-4">
+                            <h3 class="fw-bold fs-17 text-ink mb-1">Questions?</h3>
+                            <p class="fs-13 text-soft mb-3">Chat with our customer service and quote booking no. {{ $reservation->code }}.</p>
+                            <a href="{{ $whatsappLink }}" target="_blank" rel="noopener" class="btn-contact-whatsapp w-100 mw-100"><i class="fa fa-whatsapp" aria-hidden="true"></i> WhatsApp us</a>
+                            @if ($whatsappNumber)
+                                <p class="fs-12 text-soft text-center mt-2 mb-0">{{ $whatsappNumber }}</p>
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -190,32 +214,10 @@
                                     </h5>
                                 </div>
 
-                                <div class="mb-4">
+                                <div>
                                     <label class="form-label small fw-bold text-uppercase fs-12 mb-1 text-break" for="customer_notes" style="color: #33383c;">Notes / Flight Number / Hotel Details</label>
                                     <textarea name="customer_notes" id="customer_notes" class="form-control fs-13 text-break @error('customer_notes') is-invalid @enderror" rows="3" maxlength="1000" placeholder="Flight number, hotel for delivery, or any questions about your dates" style="border-color: #dee2e6;">{{ old('customer_notes') }}</textarea>
                                     @error('customer_notes')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
-
-                                <div>
-                                    <span class="form-label small fw-bold text-uppercase fs-12 mb-3 d-block text-break" style="color: #33383c;">
-                                        <i class="fa fa-comments me-1" style="color: #e9993e;"></i> Preferred Contact <span class="text-danger">*</span>
-                                    </span>
-
-                                    @php $preference = old('contact_preference', 'whatsapp'); @endphp
-                                    <div class="row g-3">
-                                        @foreach (['email' => ['Email', 'Written details'], 'whatsapp' => ['WhatsApp', 'Fast messaging'], 'phone' => ['Phone Call', 'Talk to our team']] as $value => [$title, $hint])
-                                            <div class="col-md-4 col-12">
-                                                <input class="form-check-input channel-input d-none" type="radio" name="contact_preference" id="pref_{{ $value }}" value="{{ $value }}" {{ $preference === $value ? 'checked' : '' }}>
-                                                <label class="channel-card-num p-3 rounded-2 d-flex align-items-center gap-3 h-100 w-100" for="pref_{{ $value }}">
-                                                    <div class="num-box flex-shrink-0"><i class="fa {{ ['email' => 'fa-envelope', 'whatsapp' => 'fa-whatsapp', 'phone' => 'fa-phone'][$value] }}"></i></div>
-                                                    <div class="min-w-0">
-                                                        <span class="d-block channel-title fw-bold fs-13 mb-0 text-break" style="color: #33383c;">{{ $title }}</span>
-                                                        <span class="fs-11 text-muted text-break">{{ $hint }}</span>
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        @endforeach
-                                    </div>
                                 </div>
                             </div>
 
@@ -237,7 +239,7 @@
 
                                 @include('cars.partials.summary')
 
-                                <button type="submit" class="btn btn-dark w-100 text-center border-0 py-3 mt-4 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-white d-none d-xl-flex align-items-center justify-content-center gap-2">
+                                <button type="submit" class="js-send-request btn btn-dark w-100 text-center border-0 py-3 mt-4 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-white d-none d-xl-flex align-items-center justify-content-center gap-2">
                                     <span>Send Booking Request</span> <i class="fa fa-paper-plane"></i>
                                 </button>
                             </div>
@@ -258,45 +260,108 @@
         <span class="text-uppercase fs-10 fw-bold tracking-wider d-block text-truncate" style="color: #6c757d;">Estimated Total</span>
         <div class="fw-bold fs-18 text-truncate" style="color: #33383c;">RM {{ number_format($quote['total'], 2) }}</div>
     </div>
-    <button type="submit" form="detailsForm" class="btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
+    <button type="submit" form="detailsForm" class="js-send-request btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
         <span>Send Request</span> <i class="fa fa-paper-plane"></i>
     </button>
 </div>
 @endif
 
 @push('styles')
+@include('partials.listing-styles')
 <style>
-    .text-break { word-break: break-word; overflow-wrap: break-word; }
-    .min-w-0 { min-width: 0; }
-    .channel-card-num {
-        cursor: pointer;
-        transition: all 0.2s ease-in-out;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6 !important;
-    }
-    .channel-card-num:hover { background-color: #e9ecef; border-color: #adb5bd !important; }
-    .channel-input:checked + .channel-card-num {
-        background-color: #fffaf4 !important;
-        border-color: #e9993e !important;
-        box-shadow: 0 0 0 1px #e9993e;
-    }
-    .channel-input:checked + .channel-card-num .num-box { background-color: #e9993e; color: #fff; border-color: #e9993e; }
-    .channel-input:checked + .channel-card-num .channel-title { color: #e9993e; }
-    .channel-input:focus-visible + .channel-card-num { outline: 2px solid #e9993e; outline-offset: 2px; }
-    .num-box {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
-        background-color: #fff;
-        color: #6c757d;
-        border: 1px solid #dee2e6;
+    /* Request sent */
+    .booking-page .sent-check {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
-        font-weight: 700;
-        transition: all 0.2s ease;
+        background: #e8f6ee;
+        color: #198754;
+        font-size: 28px;
     }
+    .booking-page .booking-code {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 8px;
+        background: #f6f7f9;
+        border: 1px dashed #c9ccd3;
+        font-weight: 700;
+        font-size: 15px;
+        color: #33383c;
+        user-select: all;
+    }
+    .booking-page .sent-photo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+        padding: 16px;
+        background: linear-gradient(180deg, #f6f7f9 0%, #eceef2 100%);
+    }
+    .booking-page .sent-photo img { max-width: 100%; max-height: 200px; object-fit: contain; }
+    .booking-page .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 10px;
+        border-radius: 6px;
+        background: #fff4e6;
+        border: 1px solid #f0c48a;
+        color: #b26a12;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .booking-page .trip-list { border-left: 2px solid #e9993e; padding-left: 16px; margin-left: 4px; }
+    .booking-page .trip-list li { position: relative; }
+    .booking-page .trip-list li + li { margin-top: 14px; }
+    .booking-page .trip-list li::before {
+        content: "";
+        position: absolute;
+        left: -23px;
+        top: 3px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #e9993e;
+    }
+    .booking-page .trip-label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6c757d; }
+    .booking-page .trip-place { display: block; font-size: 14px; font-weight: 600; color: #33383c; overflow-wrap: anywhere; }
+    .booking-page .next-steps li { display: flex; gap: 14px; align-items: flex-start; }
+    .booking-page .next-steps li + li { margin-top: 16px; }
+    .booking-page .step-number {
+        flex: 0 0 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff4e6;
+        color: #e9993e;
+        font-weight: 700;
+        font-size: 14px;
+    }
+    .booking-page .price-lines > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: #495057; margin-bottom: 8px; }
+    .booking-page .price-lines > div > span:last-child { color: #33383c; font-weight: 600; white-space: nowrap; }
+    .booking-page .btn-primary-action,
+    .booking-page .btn-secondary-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 22px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .booking-page .btn-primary-action { background: var(--primary-color); color: #fff !important; }
+    .booking-page .btn-primary-action:hover { filter: brightness(.92); }
+    .booking-page .btn-secondary-action { background: #fff; color: #33383c !important; border: 1px solid #c9ccd3; }
+    .booking-page .btn-secondary-action:hover { background: #f6f7f9; }
+
+    .text-break { word-break: break-word; overflow-wrap: break-word; }
+    .min-w-0 { min-width: 0; }
     @media (max-width: 1199.98px) { #content { padding-bottom: 90px; } }
     @media (max-width: 575.98px) {
         .card .px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
@@ -322,9 +387,25 @@
                 $('#phone_number_display').trigger('focus');
                 return false;
             }
+            // Send once: lock both Send buttons until the page changes
+            if (sending) return false;
+            sending = true;
+            $('.js-send-request').prop('disabled', true).find('span').each(function () {
+                $(this).data('label', $(this).text()).text('Sending…');
+            });
             if (typeof showLoading === 'function') showLoading();
             return true;
         };
+        let sending = false;
+        // Coming back with the browser's Back button: unlock the buttons again
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                sending = false;
+                $('.js-send-request').prop('disabled', false).find('span').each(function () {
+                    if ($(this).data('label')) $(this).text($(this).data('label'));
+                });
+            }
+        });
     });
     </script>
     @endsection

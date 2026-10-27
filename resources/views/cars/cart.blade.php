@@ -98,7 +98,7 @@
                         </div>
                     </div>
 
-                    <form id="cartForm" action="{{ route('cars.cart.update') }}" method="POST" novalidate>
+                    <form id="cartForm" action="{{ route('cars.cart.update') }}" method="POST" novalidate autocomplete="off">
                         @csrf
 
                         <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">

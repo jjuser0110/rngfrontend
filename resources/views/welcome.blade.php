@@ -315,6 +315,8 @@
         </div>
     </section>
 
+    {{-- Vehicle models open for online booking (rngcarrental: Vehicle Models, "Show on Frontend") --}}
+    @if ($homeVehicles->isNotEmpty())
     <section id="section-cars">
         <div class="container">
             <div class="row align-items-center">
@@ -325,168 +327,44 @@
                 </div>
 
                 <div id="items-carousel" class="owl-carousel wow fadeIn">
-
-                    <div class="col-lg-12">
-                        <div class="de-item mb30">
-                            <div class="d-img">
-                                <img src="images/cars/jeep-renegade.jpg" class="img-fluid" alt="">
-                            </div>
-                            <div class="d-info">
-                                <div class="d-text">
-                                    <h4>Jeep Renegade</h4>
-                                    <div class="d-item_like">
-                                        <i class="fa fa-heart"></i><span>74</span>
-                                    </div>
-                                    <div class="d-atr-group">
-                                        <span class="d-atr"><img src="images/icons/1-green.svg" alt="">5</span>
-                                        <span class="d-atr"><img src="images/icons/2-green.svg" alt="">2</span>
-                                        <span class="d-atr"><img src="images/icons/3-green.svg" alt="">4</span>
-                                        <span class="d-atr"><img src="images/icons/4-green.svg" alt="">SUV</span>
-                                    </div>
-                                    <div class="d-price">
-                                        Daily rate from <span>$265</span>
-                                        <a class="btn-main" href="car-single.html">Rent Now</a>
+                    @foreach ($homeVehicles as $vehicleModel)
+                        @php
+                            $image = $vehicleModel->getFirstMedia('attachments');
+                            $imageUrl = $image ? $image->getUrl() : asset('images/cars/jeep-renegade.jpg');
+                        @endphp
+                        <div class="col-lg-12">
+                            <div class="de-item mb30">
+                                <div class="d-img home-vehicle-photo">
+                                    <img src="{{ $imageUrl }}" alt="{{ $vehicleModel->name }}">
+                                </div>
+                                <div class="d-info">
+                                    <div class="d-text">
+                                        <h4>{{ $vehicleModel->name }}</h4>
+                                        <div class="d-atr-group">
+                                            @if ($vehicleModel->seats)
+                                                <span class="d-atr" title="Seats"><img src="{{ asset('images/icons/1-green.svg') }}" alt="">{{ $vehicleModel->seats }}</span>
+                                            @endif
+                                            @if ($vehicleModel->luggage !== null)
+                                                <span class="d-atr" title="Bags"><img src="{{ asset('images/icons/2-green.svg') }}" alt="">{{ $vehicleModel->luggage }}</span>
+                                            @endif
+                                            @if ($vehicleModel->vehicleClass)
+                                                <span class="d-atr"><img src="{{ asset('images/icons/4-green.svg') }}" alt="">{{ $vehicleModel->vehicleClass->name }}</span>
+                                            @endif
+                                        </div>
+                                        <div class="d-price">
+                                            Daily rate from <span>RM {{ number_format($vehicleModel->rate('daily_rate')) }}</span>
+                                            <a class="btn-main" href="{{ route('cars.select', $vehicleModel) }}">Rent Now</a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="col-lg-12">
-                        <div class="de-item mb30">
-                            <div class="d-img">
-                                <img src="images/cars/bmw-m5.jpg" class="img-fluid" alt="">
-                            </div>
-                            <div class="d-info">
-                                <div class="d-text">
-                                    <h4>BMW M2</h4>
-                                    <div class="d-item_like">
-                                        <i class="fa fa-heart"></i><span>36</span>
-                                    </div>
-                                    <div class="d-atr-group">
-                                        <span class="d-atr"><img src="images/icons/1-green.svg" alt="">5</span>
-                                        <span class="d-atr"><img src="images/icons/2-green.svg" alt="">2</span>
-                                        <span class="d-atr"><img src="images/icons/3-green.svg" alt="">4</span>
-                                        <span class="d-atr"><img src="images/icons/4-green.svg" alt="">Sedan</span>
-                                    </div>
-                                    <div class="d-price">
-                                        Daily rate from <span>$244</span>
-                                        <a class="btn-main" href="car-single.html">Rent Now</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-12">
-                        <div class="de-item mb30">
-                            <div class="d-img">
-                                <img src="images/cars/ferrari-enzo.jpg" class="img-fluid" alt="">
-                            </div>
-                            <div class="d-info">
-                                <div class="d-text">
-                                    <h4>Ferarri Enzo</h4>
-                                    <div class="d-item_like">
-                                        <i class="fa fa-heart"></i><span>85</span>
-                                    </div>
-                                    <div class="d-atr-group">
-                                        <span class="d-atr"><img src="images/icons/1-green.svg" alt="">5</span>
-                                        <span class="d-atr"><img src="images/icons/2-green.svg" alt="">2</span>
-                                        <span class="d-atr"><img src="images/icons/3-green.svg" alt="">4</span>
-                                        <span class="d-atr"><img src="images/icons/4-green.svg" alt="">Exotic Car</span>
-                                    </div>
-                                    <div class="d-price">
-                                        Daily rate from <span>$167</span>
-                                        <a class="btn-main" href="car-single.html">Rent Now</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-12">
-                        <div class="de-item mb30">
-                            <div class="d-img">
-                                <img src="images/cars/ford-raptor.jpg" class="img-fluid" alt="">
-                            </div>
-                            <div class="d-info">
-                                <div class="d-text">
-                                    <h4>Ford Raptor</h4>
-                                    <div class="d-item_like">
-                                        <i class="fa fa-heart"></i><span>59</span>
-                                    </div>
-                                    <div class="d-atr-group">
-                                        <span class="d-atr"><img src="images/icons/1-green.svg" alt="">5</span>
-                                        <span class="d-atr"><img src="images/icons/2-green.svg" alt="">2</span>
-                                        <span class="d-atr"><img src="images/icons/3-green.svg" alt="">4</span>
-                                        <span class="d-atr"><img src="images/icons/4-green.svg" alt="">Truck</span>
-                                    </div>
-                                    <div class="d-price">
-                                        Daily rate from <span>$147</span>
-                                        <a class="btn-main" href="car-single.html">Rent Now</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-12">
-                        <div class="de-item mb30">
-                            <div class="d-img">
-                                <img src="images/cars/mini-cooper.jpg" class="img-fluid" alt="">
-                            </div>
-                            <div class="d-info">
-                                <div class="d-text">
-                                    <h4>Mini Cooper</h4>
-                                    <div class="d-item_like">
-                                        <i class="fa fa-heart"></i><span>19</span>
-                                    </div>
-                                    <div class="d-atr-group">
-                                        <span class="d-atr"><img src="images/icons/1-green.svg" alt="">5</span>
-                                        <span class="d-atr"><img src="images/icons/2-green.svg" alt="">2</span>
-                                        <span class="d-atr"><img src="images/icons/3-green.svg" alt="">4</span>
-                                        <span class="d-atr"><img src="images/icons/4-green.svg" alt="">Hatchback</span>
-                                    </div>
-                                    <div class="d-price">
-                                        Daily rate from <span>$238</span>
-                                        <a class="btn-main" href="car-single.html">Rent Now</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-12">
-                        <div class="de-item mb30">
-                            <div class="d-img">
-                                <img src="images/cars/vw-polo.jpg" class="img-fluid" alt="">
-                            </div>
-                            <div class="d-info">
-                                <div class="d-text">
-                                    <h4>VW Polo</h4>
-                                    <div class="d-item_like">
-                                        <i class="fa fa-heart"></i><span>79</span>
-                                    </div>
-                                    <div class="d-atr-group">
-                                        <span class="d-atr"><img src="images/icons/1-green.svg" alt="">5</span>
-                                        <span class="d-atr"><img src="images/icons/2-green.svg" alt="">2</span>
-                                        <span class="d-atr"><img src="images/icons/3-green.svg" alt="">4</span>
-                                        <span class="d-atr"><img src="images/icons/4-green.svg" alt="">Hatchback</span>
-                                    </div>
-                                    <div class="d-price">
-                                        Daily rate from <span>$106</span>
-                                        <a class="btn-main" href="car-single.html">Rent Now</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                    @endforeach
                 </div>
-
             </div>
         </div>
     </section>
+    @endif
 
     <section class="text-light jarallax" aria-label="section">
         <img src="images/background/3.jpg" alt="" class="jarallax-img">
@@ -523,6 +401,10 @@
 
 @push('styles')
 <style>
+    /* Our Vehicles: whole car on a light background, whatever the photo's shape */
+    .home-vehicle-photo { height: 220px; display: flex; align-items: center; justify-content: center; padding: 12px; background: #f3f4f6; border-radius: 8px; overflow: hidden; }
+    .home-vehicle-photo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
     #vehicle-search .search-heading,
     #vehicle-search .search-label { display: block; font-size: 15px; font-weight: 700; color: #1f2a44; margin-bottom: 14px; }
     #vehicle-search .search-label { margin-bottom: 8px; }

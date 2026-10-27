@@ -6,6 +6,8 @@ use App\Catalog\Contracts\HomestayCatalog;
 use App\Catalog\Contracts\TourCatalog;
 use App\Catalog\Sample\SampleHomestayCatalog;
 use App\Catalog\Sample\SampleTourCatalog;
+use App\Support\SiteInfo;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Company contact details for the top bar and footer
+        View::composer(['layouts.navtop', 'layouts.footer'], fn($view) => $view->with('site', SiteInfo::get()));
     }
 }

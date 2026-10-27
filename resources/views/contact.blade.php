@@ -72,24 +72,26 @@
                 
                 <div class="col-lg-4">
 
+                    {{-- Contact details from the company record and config/site.php; empty ones are hidden --}}
+                    @php $site = \App\Support\SiteInfo::get(); @endphp
                     <div class="de-box mb30">
-                        <h4>US Office</h4>
-                        <address class="s1">
-                            <span><i class="id-color fa fa-map-marker fa-lg"></i>08 W 36th St, New York, NY 10001</span>
-                            <span><i class="id-color fa fa-phone fa-lg"></i>+1 333 9296</span>
-                            <span><i class="id-color fa fa-envelope-o fa-lg"></i><a href="mailto:contact@example.com">contact@example.com</a></span>
-                            <span><i class="id-color fa fa-file-pdf-o fa-lg"></i><a href="#">Download Brochure</a></span>
-                        </address>
-                    </div>
-
-
-                    <div class="de-box mb30">
-                        <h4>AU Office</h4>
-                        <address class="s1">
-                            <span><i class="fa fa-map-marker fa-lg"></i>100 Mainstreet Center, Sydney</span>
-                            <span><i class="fa fa-phone fa-lg"></i>+61 333 9296</span>
-                            <span><i class="fa fa-envelope-o fa-lg"></i><a href="mailto:contact@example.com">contact@example.com</a></span>
-                            <span><i class="fa fa-file-pdf-o fa-lg"></i><a href="#">Download Brochure</a></span>
+                        <h4>Kuching Office</h4>
+                        <address class="s1 contact-lines">
+                            @if ($site['address'])
+                                <span><i class="id-color fa fa-map-marker fa-lg"></i>{{ $site['address'] }}</span>
+                            @endif
+                            @if ($site['phone'])
+                                <span><i class="id-color fa fa-phone fa-lg"></i><a href="{{ $site['phone_link'] }}">{{ $site['phone'] }}</a></span>
+                            @endif
+                            @if ($site['whatsapp'])
+                                <span><i class="id-color fa fa-whatsapp fa-lg"></i><a href="{{ \App\Support\WhatsApp::link() }}" target="_blank" rel="noopener">{{ $site['whatsapp'] }}</a></span>
+                            @endif
+                            @if ($site['email'])
+                                <span><i class="id-color fa fa-envelope-o fa-lg"></i><a href="mailto:{{ $site['email'] }}">{{ $site['email'] }}</a></span>
+                            @endif
+                            @if ($site['hours'])
+                                <span><i class="id-color fa fa-clock-o fa-lg"></i>{{ $site['hours'] }}</span>
+                            @endif
                         </address>
                     </div>
 

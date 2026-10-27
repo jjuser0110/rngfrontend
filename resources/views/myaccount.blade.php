@@ -35,7 +35,7 @@
                     <div class="d-flex align-items-center gap-3">
                         <img src="{{ asset('images/profile/1.jpg') }}" class="rounded-circle shadow-sm border border-2 border-white object-fit-cover" alt="Profile Avatar" style="width: 52px; height: 52px;">
                         <div>
-                            <h5 class="fw-bold fs-15 mb-0" style="color: #33383c;">{{ $customer->first_name ?? 'Monica' }} {{ $customer->last_name ?? 'Lucas' }}</h5>
+                            <h5 class="fw-bold fs-15 mb-0" style="color: #33383c;">{{ $customer->first_name ?? '' }} {{ $customer->last_name ?? '' }}</h5>
                             <span class="fs-12 d-block" style="color: #6c757d;">{{ $customer->email ?? Auth::user()->email }}</span>
                         </div>
                     </div>
@@ -54,12 +54,7 @@
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link btn btn-sm btn-light border px-3 py-2 rounded-2 fw-semibold fs-12 text-dark bg-white tab-btn" id="orders-tab" data-bs-toggle="pill" data-bs-target="#orders" type="button" role="tab" style="border-color: #dee2e6 !important;">
-                                <i class="fa fa-calendar-alt me-1" style="color: #6c757d;"></i> My Orders
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link btn btn-sm btn-light border px-3 py-2 rounded-2 fw-semibold fs-12 text-dark bg-white tab-btn" id="favorites-tab" data-bs-toggle="pill" data-bs-target="#favorites" type="button" role="tab" style="border-color: #dee2e6 !important;">
-                                <i class="fa fa-heart me-1" style="color: #6c757d;"></i> My Favorites
+                                <i class="fa fa-calendar me-1" style="color: #6c757d;"></i> My Bookings
                             </button>
                         </li>
                         <li class="nav-item">
@@ -94,106 +89,38 @@
                 {{-- ========================================== --}}
                 <div class="tab-pane fade show active" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
 
-                    {{-- Metrics Stat Cards --}}
                     <div class="row g-3 mb-4">
-                        <div class="col-xl-3 col-sm-6 col-12">
-                            <div class="card border border-light shadow-sm rounded-3 p-3 bg-white h-100 d-flex flex-row align-items-center justify-content-between">
-                                <div>
-                                    <span class="text-uppercase fs-10 fw-bold tracking-wider d-block mb-1" style="color: #6c757d;">Upcoming</span>
-                                    <div class="fw-bold fs-22" style="color: #33383c;">03</div>
-                                </div>
-                                <div class="rounded-2 p-2 d-flex align-items-center justify-content-center" style="background-color: #fffaf4; width: 44px; height: 44px;">
-                                    <i class="fa fa-calendar-check fs-20" style="color: #e9993e;"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xl-3 col-sm-6 col-12">
-                            <div class="card border border-light shadow-sm rounded-3 p-3 bg-white h-100 d-flex flex-row align-items-center justify-content-between">
-                                <div>
-                                    <span class="text-uppercase fs-10 fw-bold tracking-wider d-block mb-1" style="color: #6c757d;">Coupons</span>
-                                    <div class="fw-bold fs-22" style="color: #33383c;">12</div>
-                                </div>
-                                <div class="rounded-2 p-2 d-flex align-items-center justify-content-center" style="background-color: #fffaf4; width: 44px; height: 44px;">
-                                    <i class="fa fa-tags fs-20" style="color: #e9993e;"></i>
+                        @foreach ([
+                            ['Requests', $bookingCounts['requests'], 'fa-hourglass-half', 'Waiting for our quotation or your reply'],
+                            ['Upcoming', $bookingCounts['upcoming'], 'fa-calendar-check-o', 'Confirmed or on rent'],
+                            ['Completed', $bookingCounts['completed'], 'fa-flag-checkered', 'Past rentals'],
+                            ['Cancelled', $bookingCounts['cancelled'], 'fa-ban', 'Cancelled bookings'],
+                        ] as [$label, $count, $icon, $hint])
+                            <div class="col-xl-3 col-sm-6 col-12">
+                                <div class="card border border-light shadow-sm rounded-3 p-3 bg-white h-100 d-flex flex-row align-items-center justify-content-between">
+                                    <div>
+                                        <span class="text-uppercase fs-11 fw-bold d-block mb-1" style="color: #6c757d;">{{ $label }}</span>
+                                        <div class="fw-bold fs-22" style="color: #33383c;">{{ $count }}</div>
+                                        <span class="fs-11" style="color: #6c757d;">{{ $hint }}</span>
+                                    </div>
+                                    <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="background-color: #fffaf4; width: 44px; height: 44px;">
+                                        <i class="fa {{ $icon }} fs-18" style="color: #e9993e;"></i>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="col-xl-3 col-sm-6 col-12">
-                            <div class="card border border-light shadow-sm rounded-3 p-3 bg-white h-100 d-flex flex-row align-items-center justify-content-between">
-                                <div>
-                                    <span class="text-uppercase fs-10 fw-bold tracking-wider d-block mb-1" style="color: #6c757d;">Total Orders</span>
-                                    <div class="fw-bold fs-22" style="color: #33383c;">58</div>
-                                </div>
-                                <div class="rounded-2 p-2 d-flex align-items-center justify-content-center" style="background-color: #fffaf4; width: 44px; height: 44px;">
-                                    <i class="fa fa-car fs-20" style="color: #e9993e;"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-xl-3 col-sm-6 col-12">
-                            <div class="card border border-light shadow-sm rounded-3 p-3 bg-white h-100 d-flex flex-row align-items-center justify-content-between">
-                                <div>
-                                    <span class="text-uppercase fs-10 fw-bold tracking-wider d-block mb-1" style="color: #6c757d;">Cancelled</span>
-                                    <div class="fw-bold fs-22" style="color: #33383c;">24</div>
-                                </div>
-                                <div class="rounded-2 p-2 d-flex align-items-center justify-content-center" style="background-color: #fffaf4; width: 44px; height: 44px;">
-                                    <i class="fa fa-calendar-times fs-20" style="color: #e9993e;"></i>
-                                </div>
-                            </div>
-                        </div>
+                        @endforeach
                     </div>
 
-                    {{-- Recent Orders Table Preview --}}
-                    <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
+                    <div class="card border border-light shadow-sm rounded-3 p-3 p-md-4 bg-white mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light gap-2">
                             <h5 class="fw-bold mb-0 fs-15" style="color: #33383c;">
-                                <i class="fa fa-history me-2" style="color: #e9993e;"></i> Recent Orders Preview
+                                <i class="fa fa-history me-2" style="color: #e9993e;"></i> Recent Bookings
                             </h5>
-                            <span class="bg-light border px-2 py-1 fs-11 rounded-1 fw-semibold" style="color: #6c757d; border-color: #dee2e6 !important;">Showing last 5</span>
+                            @if ($bookings->count() > 3)
+                                <button type="button" class="btn btn-link p-0 fs-12 fw-semibold js-open-bookings" style="color: #e9993e;">View all {{ $bookings->count() }}</button>
+                            @endif
                         </div>
-
-                        <div class="table-responsive">
-                            <table class="table align-middle fs-13 mb-0">
-                                <thead>
-                                    <tr class="text-uppercase fs-11 border-bottom" style="color: #6c757d; letter-spacing: 0.5px;">
-                                        <th scope="col" class="pb-2 fw-bold">Order ID</th>
-                                        <th scope="col" class="pb-2 fw-bold">Car Name</th>
-                                        <th scope="col" class="pb-2 fw-bold">Pick Up</th>
-                                        <th scope="col" class="pb-2 fw-bold">Drop Off</th>
-                                        <th scope="col" class="pb-2 fw-bold">Dates</th>
-                                        <th scope="col" class="pb-2 fw-bold text-end">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><span class="badge bg-light text-dark border fw-semibold fs-12">#01236</span></td>
-                                        <td class="fw-bold text-dark">Jeep Renegade</td>
-                                        <td style="color: #495057;">Kuching Airport</td>
-                                        <td style="color: #495057;">Kuching City</td>
-                                        <td><span class="d-block fs-12 text-dark">Mar 2 - Mar 10</span></td>
-                                        <td class="text-end"><span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-2 fs-11 fw-semibold">Completed</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="badge bg-light text-dark border fw-semibold fs-12">#01263</span></td>
-                                        <td class="fw-bold text-dark">Mini Cooper</td>
-                                        <td style="color: #495057;">Damai Beach</td>
-                                        <td style="color: #495057;">Kuching Airport</td>
-                                        <td><span class="d-block fs-12 text-dark">Mar 8 - Mar 10</span></td>
-                                        <td class="text-end"><span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-2 fs-11 fw-semibold">Cancelled</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="badge bg-light text-dark border fw-semibold fs-12">#01245</span></td>
-                                        <td class="fw-bold text-dark">Ferrari Enzo</td>
-                                        <td style="color: #495057;">Kuching City</td>
-                                        <td style="color: #495057;">Kuching City</td>
-                                        <td><span class="d-block fs-12 text-dark">Mar 6 - Mar 10</span></td>
-                                        <td class="text-end"><span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 rounded-2 fs-11 fw-semibold">Scheduled</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        @include('partials.booking-list', ['bookingList' => $bookings->take(3)])
                     </div>
 
                 </div>
@@ -416,108 +343,14 @@
                 {{-- ========================================== --}}
                 <div class="tab-pane fade" id="orders" role="tabpanel" aria-labelledby="orders-tab">
 
-                    <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white">
-                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
+                    <div class="card border border-light shadow-sm rounded-3 p-3 p-md-4 bg-white">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light gap-2">
                             <h5 class="fw-bold mb-0 fs-15" style="color: #33383c;">
-                                <i class="fa fa-calendar-alt me-2" style="color: #e9993e;"></i> Complete Booking History
+                                <i class="fa fa-calendar me-2" style="color: #e9993e;"></i> My Bookings
                             </h5>
-                            <span class="badge bg-light text-dark border px-2 py-1">Total: 58 Orders</span>
+                            <span class="badge bg-light text-dark border px-2 py-1 fs-11">{{ $bookings->count() }} {{ \Illuminate\Support\Str::plural('booking', $bookings->count()) }}</span>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table align-middle fs-13 mb-0">
-                                <thead>
-                                    <tr class="text-uppercase fs-11 border-bottom" style="color: #6c757d; letter-spacing: 0.5px;">
-                                        <th scope="col" class="pb-2 fw-bold">Order ID</th>
-                                        <th scope="col" class="pb-2 fw-bold">Car Name</th>
-                                        <th scope="col" class="pb-2 fw-bold">Pick Up Location</th>
-                                        <th scope="col" class="pb-2 fw-bold">Drop Off Location</th>
-                                        <th scope="col" class="pb-2 fw-bold">Rental Dates</th>
-                                        <th scope="col" class="pb-2 fw-bold text-end">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><span class="badge bg-light text-dark border fw-semibold fs-12">#01236</span></td>
-                                        <td class="fw-bold text-dark">Jeep Renegade</td>
-                                        <td style="color: #495057;">Kuching Airport</td>
-                                        <td style="color: #495057;">Kuching City Center</td>
-                                        <td>Mar 2, 2026 - Mar 10, 2026</td>
-                                        <td class="text-end"><span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-2 fs-11 fw-semibold">Completed</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="badge bg-light text-dark border fw-semibold fs-12">#01263</span></td>
-                                        <td class="fw-bold text-dark">Mini Cooper</td>
-                                        <td style="color: #495057;">Damai Beach Resort</td>
-                                        <td style="color: #495057;">Kuching Airport</td>
-                                        <td>Mar 8, 2026 - Mar 10, 2026</td>
-                                        <td class="text-end"><span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-2 fs-11 fw-semibold">Cancelled</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="badge bg-light text-dark border fw-semibold fs-12">#01245</span></td>
-                                        <td class="fw-bold text-dark">Ferrari Enzo</td>
-                                        <td style="color: #495057;">Kuching City Center</td>
-                                        <td style="color: #495057;">Kuching City Center</td>
-                                        <td>Mar 6, 2026 - Mar 10, 2026</td>
-                                        <td class="text-end"><span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 rounded-2 fs-11 fw-semibold">Scheduled</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                </div>
-
-                {{-- ========================================== --}}
-                {{-- TAB 4: MY FAVORITES CONTENTS --}}
-                {{-- ========================================== --}}
-                <div class="tab-pane fade" id="favorites" role="tabpanel" aria-labelledby="favorites-tab">
-
-                    <div class="row g-4">
-                        <div class="col-md-6 col-12">
-                            <div class="card border border-light shadow rounded-3 p-4 bg-white h-100 d-flex flex-column justify-content-between">
-                                <div>
-                                    <div class="position-relative mb-3">
-                                        <img src="{{ asset('images/cars/jeep-renegade.jpg') }}" class="img-fluid rounded-2 w-100 object-fit-cover" alt="Jeep" style="height: 150px;">
-                                    </div>
-                                    <h4 class="fw-bold fs-17 mb-2" style="color: #33383c;">Jeep Renegade</h4>
-                                    <ul class="list-unstyled fs-12 mb-3 d-flex flex-wrap gap-3 fw-semibold" style="color: #6c757d;">
-                                        <li><i class="fa fa-user me-1" style="color: #e9993e;"></i> 4 Seats</li>
-                                        <li><i class="fa fa-briefcase me-1" style="color: #e9993e;"></i> 2 Bags</li>
-                                        <li><i class="fa fa-cogs me-1" style="color: #e9993e;"></i> Auto</li>
-                                    </ul>
-                                </div>
-                                <div class="pt-3 border-top border-light d-flex align-items-center justify-content-between">
-                                    <div>
-                                        <span class="text-uppercase fs-10 fw-bold d-block" style="color: #6c757d;">Daily Rate</span>
-                                        <div class="fw-bold fs-18" style="color: #33383c;">$265.00 <span class="fs-11 fw-normal" style="color: #6c757d;">/ day</span></div>
-                                    </div>
-                                    <a href="{{ route('cars.index') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white">Rent Now</a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6 col-12">
-                            <div class="card border border-light shadow rounded-3 p-4 bg-white h-100 d-flex flex-column justify-content-between">
-                                <div>
-                                    <div class="position-relative mb-3">
-                                        <img src="{{ asset('images/cars/bmw-m5.jpg') }}" class="img-fluid rounded-2 w-100 object-fit-cover" alt="BMW" style="height: 150px;">
-                                    </div>
-                                    <h4 class="fw-bold fs-17 mb-2" style="color: #33383c;">BMW M2</h4>
-                                    <ul class="list-unstyled fs-12 mb-3 d-flex flex-wrap gap-3 fw-semibold" style="color: #6c757d;">
-                                        <li><i class="fa fa-user me-1" style="color: #e9993e;"></i> 4 Seats</li>
-                                        <li><i class="fa fa-briefcase me-1" style="color: #e9993e;"></i> 2 Bags</li>
-                                        <li><i class="fa fa-cogs me-1" style="color: #e9993e;"></i> Auto</li>
-                                    </ul>
-                                </div>
-                                <div class="pt-3 border-top border-light d-flex align-items-center justify-content-between">
-                                    <div>
-                                        <span class="text-uppercase fs-10 fw-bold d-block" style="color: #6c757d;">Daily Rate</span>
-                                        <div class="fw-bold fs-18" style="color: #33383c;">$244.00 <span class="fs-11 fw-normal" style="color: #6c757d;">/ day</span></div>
-                                    </div>
-                                    <a href="{{ route('cars.index') }}" class="btn btn-dark px-4 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-white">Rent Now</a>
-                                </div>
-                            </div>
-                        </div>
+                        @include('partials.booking-list', ['bookingList' => $bookings])
                     </div>
 
                 </div>
@@ -550,6 +383,11 @@ document.addEventListener('DOMContentLoaded', function () {
             phone.setError(phoneError);
             $('#phone_number_display').trigger('focus');
         }
+    });
+
+    // "View all" on the dashboard opens the My Bookings tab
+    document.querySelectorAll('.js-open-bookings').forEach(link => {
+        link.addEventListener('click', () => document.getElementById('orders-tab').click());
     });
 
     const triggerTabList = document.querySelectorAll('#accountTab .tab-btn');

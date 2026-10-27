@@ -1,20 +1,6 @@
 {{-- Shared styles for the homestay and tour pages --}}
 <style>
-    /* The theme sets white-space: nowrap on every .d-flex (for its marquee); let text wrap here */
-    .listing-page .d-flex { white-space: normal; }
     .listing-page h1, .listing-page h2, .listing-page h3 { letter-spacing: normal; line-height: 1.3; overflow-wrap: anywhere; }
-    /* Font sizes used on these pages (the theme has no fs-NN helpers) */
-    .listing-page .fs-10 { font-size: 10px !important; }
-    .listing-page .fs-11 { font-size: 11px !important; }
-    .listing-page .fs-12 { font-size: 12px !important; }
-    .listing-page .fs-13 { font-size: 13px !important; }
-    .listing-page .fs-14 { font-size: 14px !important; }
-    .listing-page .fs-15 { font-size: 15px !important; }
-    .listing-page .fs-16 { font-size: 16px !important; }
-    .listing-page .fs-17 { font-size: 17px !important; }
-    .listing-page .fs-18 { font-size: 18px !important; }
-    .listing-page .fs-20 { font-size: 20px !important; }
-    .listing-page .fs-24 { font-size: 24px !important; }
 
     .listing-page a { text-decoration: none; }
     .listing-page .text-ink { color: #33383c; }

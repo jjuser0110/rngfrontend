@@ -1,0 +1,34 @@
+/*
+ * Small helpers the theme doesn't have, used across the site's pages.
+ * Loaded after the theme (layouts/head.blade.php).
+ */
+
+/* Font sizes: fs-10 ... fs-24 */
+.fs-10 { font-size: 10px !important; }
+.fs-11 { font-size: 11px !important; }
+.fs-12 { font-size: 12px !important; }
+.fs-13 { font-size: 13px !important; }
+.fs-14 { font-size: 14px !important; }
+.fs-15 { font-size: 15px !important; }
+.fs-16 { font-size: 16px !important; }
+.fs-17 { font-size: 17px !important; }
+.fs-18 { font-size: 18px !important; }
+.fs-20 { font-size: 20px !important; }
+.fs-22 { font-size: 22px !important; }
+.fs-24 { font-size: 24px !important; }
+
+@media (min-width: 768px) {
+    .fs-md-15 { font-size: 15px !important; }
+    .fs-md-17 { font-size: 17px !important; }
+}
+
+/* Headings inside cards: normal spacing (the theme's h1-h5 are tuned for large banners) */
+#content .card h1, #content .card h2, #content .card h3, #content .card h4, #content .card h5 {
+    letter-spacing: normal;
+    line-height: 1.3;
+}
+
+/* The theme sets white-space: nowrap on every .d-flex (for its scrolling marquee). Let text wrap
+   everywhere else so long names and addresses don't run off the edge. */
+#content .d-flex { white-space: normal; }
+#content .wow.d-flex { white-space: nowrap; }
