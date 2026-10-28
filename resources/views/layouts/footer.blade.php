@@ -93,4 +93,7 @@
     /* Icon beside multi-line text (the theme's version is for one-line items) */
     .contact-lines span { display: flex; align-items: flex-start; gap: 10px; padding-left: 0 !important; margin-bottom: 8px; }
     .contact-lines span i { position: static !important; flex: 0 0 18px; margin-top: 4px; text-align: center; }
+    
+    .contact-lines span a,
+    .contact-lines span { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 </style>
