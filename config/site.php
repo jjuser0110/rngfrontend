@@ -7,18 +7,18 @@
 return [
 
     // e.g. '+60 82-123 456'
-    'phone' => '+60 82-123 456',
+    'phone' => '+60182285566',
 
     // e.g. 'info@rentngo.com.my'
-    'email' => 'info@rentngo.com.my',
+    'email' => 'rentngocarrentalsdnbhd@gmail.com',
 
     // e.g. 'Mon - Sun 08:00 - 20:00'
     'hours' => 'Mon - Sun 08:00 - 20:00',
 
     // Full profile URLs, e.g. 'https://www.facebook.com/rentngo'
     'social' => [
-        'facebook'  => null,
-        'instagram' => null,
+        'facebook' => 'https://www.facebook.com/rentngocarrentalsdnbhd',
+        'instagram' => 'https://www.instagram.com/rngcarrental',
         'youtube'   => null,
     ],
 
