@@ -55,3 +55,6 @@ use App\Http\Controllers\QuotationController;
 
 // Route for downloading the quotation
 Route::post('/quotation/download', [QuotationController::class, 'downloadQuotation'])->name('quotation.download');
+
+Route::view('/terms', 'terms')->name('terms');
+Route::view('/privacy', 'privacy')->name('privacy');

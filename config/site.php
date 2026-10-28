@@ -6,6 +6,8 @@
 
 return [
 
+    'address' => '2nd Floor, Sublot 5, Cha Yi Goldland, Jalan Tun Jugah, 93350, Kuching, Sarawak',
+    
     // e.g. '+60 82-123 456'
     'phone' => '+60182285566',
 

@@ -77,6 +77,10 @@
                                 &copy; {{ now()->year }} {{ $site['name'] }}{{ $site['registration'] ? ' (' . $site['registration'] . ')' : '' }}
                             </a>
                         </div>
+                        <ul class="menu-simple">
+                            <li><a href="{{ route('terms') }}">Terms &amp; Conditions</a></li>
+                            <li><a href="{{ route('privacy') }}">Privacy Policy</a></li>
+                        </ul>
                     </div>
                 </div>
             </div>

@@ -21,7 +21,8 @@ class SiteInfo
         $info = [
             'name'         => 'Rent N Go Car Rental Sdn Bhd',
             'registration' => $company->registration_number ?? null,
-            'address'      => self::address($company->full_address ?? null),
+            'address'      => self::address($company->full_address ?? null)
+                  ?? self::address(config('site.address')),
             'phone'        => $phone,
             'phone_link'   => $phone ? 'tel:' . preg_replace('/[^\d+]/', '', $phone) : null,
             'email'        => config('site.email'),
