@@ -340,7 +340,7 @@ $(function () {
     // Show the address box only for "Other address…" (location 0), like admin step 1
     $('.location-select').on('change', function () {
         const side = $(this).data('side');
-        $('#' + side + '_address_wrapper').prop('hidden', $(this).val() !== '0');
+        $('#' + side + '_address_wrapper').prop('hidden', $(this).val() !== '0').find('.address-missing').remove();
     });
 
     // Quantity extras: highlight the card when one is chosen
@@ -397,15 +397,43 @@ $(function () {
     // "Change car": save a change that hasn't reached the server yet, then go to the fleet
     $('.js-change-car').on('click', function (event) {
         const href = this.href;
+        window.syncAddressSearch();
         const pending = timer ? sendQuote() : request;
         if (!pending) return;
         event.preventDefault();
         pending.always(function () { window.location.href = href; });
     });
 
+    // Proceed: "Other address…" needs an address picked (the server checks this too)
+    $form.on('submit', function (event) {
+        window.syncAddressSearch();
+        $('.address-missing').remove();
+
+        let $firstMissing = null;
+        $('.location-select').each(function () {
+            const side = $(this).data('side');
+            if ($(this).val() !== '0' || $('#' + side + '_address').val().trim() !== '') return;
+            const label = side === 'pickup' ? 'pick-up' : 'drop-off';
+            const $message = $('<small class="d-block mt-1 text-danger address-missing"></small>')
+                .text('Please enter the ' + label + ' address.');
+            $('#' + side + '_address_wrapper').append($message);
+            $firstMissing = $firstMissing || $message;
+        });
+
+        if ($firstMissing) {
+            event.preventDefault();
+            $('html, body').animate({ scrollTop: $firstMissing.closest('.bg-light').offset().top - 120 }, 200);
+        }
+    });
+
     $form.on('change', 'select, input[type="checkbox"], input[type="date"]', refreshSummary);
     // Google address search; typing or picking an address re-prices too
-    window.initAddressSearch(refreshSummary);
+    window.initAddressSearch(function (input) {
+        if (input.value.trim() !== '') {
+            $(input).closest('[id$="_address_wrapper"]').find('.address-missing').remove();
+        }
+        refreshSummary();
+    });
 });
 </script>
 @endsection

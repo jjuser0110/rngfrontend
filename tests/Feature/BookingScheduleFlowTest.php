@@ -170,6 +170,25 @@ class BookingScheduleFlowTest extends TestCase
         $this->assertStringContainsString('value="' . $newReturnDate . '"', $cart);
     }
 
+    public function test_proceed_needs_an_address_for_other_address(): void
+    {
+        $this->actingAs($this->makeCustomerUser());
+        $this->searchFromHomePage();
+        $this->get(route('cars.select', $this->vehicleModel));
+        $this->get(route('cars.cart'));
+
+        // Drop-off address picked, then cleared again: the form sends "Other address" with no address
+        $this->post(route('cars.cart.update'), [
+            '_token' => csrf_token(),
+            'pickup_location_id' => 0, 'pickup_address' => $this->search['pickup_place'],
+            'return_location_id' => 0, 'return_address' => '',
+            'pickup_date' => $this->search['pickup_date'], 'pickup_time' => '14:30',
+            'return_date' => $this->search['return_date'], 'return_time' => '16:00',
+        ])->assertRedirect(route('cars.cart'))->assertSessionHasErrors(['return_address' => 'Please enter the drop-off address.']);
+
+        $this->get(route('cars.fillinfo'))->assertRedirect(route('cars.cart'));
+    }
+
     public function test_menu_sign_in_returns_to_the_cart_when_a_car_is_chosen(): void
     {
         $user = $this->makeCustomerUser();
