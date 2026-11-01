@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\CarController;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -153,7 +154,7 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
-        // Back to where the customer was heading (e.g. the cart after choosing a car)
-        return redirect()->intended(route('myaccount.index'));
+        // Back to where the customer was heading (e.g. the cart after choosing a car), or their booking in progress
+        return redirect()->intended(CarController::afterLoginUrl());
     }
 }

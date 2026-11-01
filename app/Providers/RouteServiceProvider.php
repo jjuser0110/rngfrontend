@@ -7,8 +7,6 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
-use RecursiveIteratorIterator as Iterator;
-use RecursiveDirectoryIterator as DirectoryIterator;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -41,22 +39,9 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/web.php'));
         });
 
-        $this->mapWebRoutes();
-    }
-
-    protected function mapWebRoutes()
-    {  
-        Route::group([
-            'middleware' => 'web',
-            'namespace' => $this->namespace
-        ], function ($router) {
-            $iterator = new Iterator(new DirectoryIterator(base_path('routes')), Iterator::SELF_FIRST);
-            foreach ($iterator as $file) {
-                if ($file->isFile()) {
-                    require_once $file->getPathname();
-                }
-            }
-        });
+        // Only web.php and api.php are loaded. This used to load every file in routes/, which pulled in
+        // routes/role.php (role management open to any logged-in customer, on the role table shared with
+        // rngcarrental) and the old routes/car.php, whose route names replaced the booking flow's.
     }
 
     /**

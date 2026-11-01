@@ -25,6 +25,22 @@ class CarController extends Controller
 {
     private const SESSION_KEY = 'booking';
 
+    /**
+     * Where to go after login / register when no page asked for it (e.g. the "Sign In" menu button):
+     * back to a booking in progress (the cart once a car is chosen, else the fleet with the searched dates),
+     * otherwise My Account.
+     */
+    public static function afterLoginUrl(): string
+    {
+        $draft = session(self::SESSION_KEY, []);
+
+        return match (true) {
+            !empty($draft['vehicle_model_id']) => route('cars.cart'),
+            !empty($draft['searched'])         => route('cars.index'),
+            default                            => route('myaccount.index'),
+        };
+    }
+
     /** Website models, no availability check. Open to guests. */
     public function index(Request $request)
     {
@@ -165,7 +181,12 @@ class CarController extends Controller
             return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
-        $quote = BookingQuote::make($vehicleModel, $validator->validated());
+        $validated = $this->cleanCartInput($validator->validated());
+        $quote = BookingQuote::make($vehicleModel, $validated);
+
+        // Keep the cart's changes, so "Change car" (and the trip bar) show the edited schedule, not the
+        // home page search. Proceed (updateCart) still checks everything, including the address.
+        session([self::SESSION_KEY => array_merge(session(self::SESSION_KEY, []), $validated, ['searched' => true])]);
 
         return response()->json([
             'summary' => view('cars.partials.summary', compact('quote', 'vehicleModel'))->render(),
@@ -183,16 +204,7 @@ class CarController extends Controller
 
         $validator = Validator::make($request->all(), $this->scheduleRules(), $this->scheduleMessages());
         $this->checkScheduleTimes($validator, $request->all());
-        $validated = $validator->validate();
-
-        $validated['charges'] = array_filter($validated['charges'] ?? []);
-        $validated['destinations'] = array_values($validated['destinations'] ?? []);
-        // Addresses only apply to "other address" locations (id 0), like rngcarrental step 1
-        foreach (['pickup', 'return'] as $side) {
-            if ((int) $validated[$side . '_location_id'] !== 0) {
-                $validated[$side . '_address'] = null;
-            }
-        }
+        $validated = $this->cleanCartInput($validator->validate());
 
         session([self::SESSION_KEY => array_merge($draft, $validated, ['cart_done' => true])]);
 
@@ -370,6 +382,21 @@ class CarController extends Controller
         $customerId = Auth::user()->customer_id ?? null;
 
         return $customerId ? Customer::find($customerId) : null;
+    }
+
+    /** Validated cart form, ready for the session draft. */
+    private function cleanCartInput(array $validated): array
+    {
+        $validated['charges'] = array_filter($validated['charges'] ?? []);
+        $validated['destinations'] = array_values($validated['destinations'] ?? []);
+        // Addresses only apply to "other address" locations (id 0), like rngcarrental step 1
+        foreach (['pickup', 'return'] as $side) {
+            if ((int) $validated[$side . '_location_id'] !== 0) {
+                $validated[$side . '_address'] = null;
+            }
+        }
+
+        return $validated;
     }
 
     private function scheduleRules(): array

@@ -91,7 +91,8 @@ class BookingQuote
      */
     public static function duration(Carbon $pickup, Carbon $return): array
     {
-        $totalMinutes = $pickup->diffInMinutes($return);
+        // Same as rngcarrental: whole, positive minutes (Carbon 3 returns a signed float)
+        $totalMinutes = (int) $pickup->diffInMinutes($return, true);
 
         $hours = intdiv($totalMinutes, 60);
         if ($totalMinutes % 60 >= 30) {

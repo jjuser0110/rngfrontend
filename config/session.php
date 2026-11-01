@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Support\Str;
-
 return [
 
     /*
@@ -126,10 +124,9 @@ return [
     |
     */
 
-    'cookie' => env(
-        'SESSION_COOKIE',
-        Str::slug(env('APP_NAME', 'laravel'), '_').'_session'
-    ),
+    // Hardcoded so it never matches rngcarrental's "laravel_session": on localhost both apps share
+    // cookies (ports are ignored), and the same name made each app log the other out.
+    'cookie' => 'rngfrontend_session',
 
     /*
     |--------------------------------------------------------------------------

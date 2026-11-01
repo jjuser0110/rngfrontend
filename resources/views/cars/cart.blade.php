@@ -51,7 +51,7 @@
                             <h5 class="fw-bold mb-0 fs-15" style="color: #33383c;">
                                 <i class="fa fa-car me-2" style="color: #e9993e;"></i>Selected Vehicle
                             </h5>
-                            <a href="{{ route('cars.index') }}" class="fs-12 text-decoration-none fw-semibold" style="color: #e9993e;">Change car</a>
+                            <a href="{{ route('cars.index') }}" class="js-change-car fs-12 text-decoration-none fw-semibold" style="color: #e9993e;">Change car</a>
                         </div>
 
                         <div class="row align-items-center g-4">
@@ -236,7 +236,7 @@
                     </form>
 
                     <div class="d-flex justify-content-between align-items-center mt-4">
-                        <a href="{{ route('cars.index') }}" class="btn btn-outline-secondary px-3 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-dark bg-white shadow-sm border w-100 w-sm-auto text-center" style="border-color: #adb5bd !important;">
+                        <a href="{{ route('cars.index') }}" class="js-change-car btn btn-outline-secondary px-3 py-2 rounded-2 text-uppercase fw-semibold fs-12 text-dark bg-white shadow-sm border w-100 w-sm-auto text-center" style="border-color: #adb5bd !important;">
                             <i class="fa fa-arrow-left me-2"></i> Choose Another Car
                         </a>
                     </div>
@@ -357,33 +357,51 @@ $(function () {
         }
     });
 
-    // Re-price on the server after each change (debounced)
+    // Re-price on the server after each change (debounced); the server also keeps the changes
     function refreshSummary() {
         clearTimeout(timer);
-        timer = setTimeout(function () {
-            if (request) request.abort();
-            $summary.addClass('is-loading');
-            request = $.ajax({
-                url: @json(route('cars.quote')),
-                type: 'POST',
-                data: $form.serialize(),
-                dataType: 'json',
-                success: function (res) {
-                    $summary.html(res.summary);
-                    $('#booking-total').text(res.total);
-                    $error.prop('hidden', true).text('');
-                },
-                error: function (xhr) {
-                    if (xhr.statusText === 'abort') return;
-                    const message = (xhr.responseJSON && xhr.responseJSON.message) || 'We could not update the price. Please check your details.';
-                    $error.text(message).prop('hidden', false);
-                },
-                complete: function () {
-                    $summary.removeClass('is-loading');
-                }
-            });
-        }, 300);
+        timer = setTimeout(sendQuote, 300);
     }
+
+    function sendQuote() {
+        timer = null;
+        if (request) request.abort();
+        $summary.addClass('is-loading');
+        const xhr = request = $.ajax({
+            url: @json(route('cars.quote')),
+            type: 'POST',
+            data: $form.serialize(),
+            dataType: 'json',
+            success: function (res) {
+                $summary.html(res.summary);
+                $('#booking-total').text(res.total);
+                $error.prop('hidden', true).text('');
+            },
+            error: function (xhr) {
+                if (xhr.statusText === 'abort') return;
+                const message = (xhr.responseJSON && xhr.responseJSON.message) || 'We could not update the price. Please check your details.';
+                $error.text(message).prop('hidden', false);
+            },
+            complete: function () {
+                // An aborted older request finishes after the new one starts: only clear our own
+                if (request === xhr) {
+                    $summary.removeClass('is-loading');
+                    request = null;
+                }
+            }
+        });
+
+        return xhr;
+    }
+
+    // "Change car": save a change that hasn't reached the server yet, then go to the fleet
+    $('.js-change-car').on('click', function (event) {
+        const href = this.href;
+        const pending = timer ? sendQuote() : request;
+        if (!pending) return;
+        event.preventDefault();
+        pending.always(function () { window.location.href = href; });
+    });
 
     $form.on('change', 'select, input[type="checkbox"], input[type="date"]', refreshSummary);
     // Google address search; typing or picking an address re-prices too

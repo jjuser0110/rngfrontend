@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\InvoiceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,8 +17,4 @@ use App\Http\Controllers\InvoiceController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 
-});
-
-Route::prefix('invoice')->group(function() {
-    Route::post('/create', [InvoiceController::class, 'apiStore'])->name('api.invoice.create');
 });

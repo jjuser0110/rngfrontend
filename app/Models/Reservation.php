@@ -290,7 +290,7 @@ class Reservation extends Model implements HasMedia
         $pickup = Carbon::parse($this->pickup_date . ' ' . $this->pickup_time);
         $return = Carbon::parse($this->return_date . ' ' . $this->return_time);
 
-        $totalMinutes = $pickup->diffInMinutes($return);
+        $totalMinutes = (int) $pickup->diffInMinutes($return, true);
 
         // Convert to hours (round minutes >= 30)
         $hours = intdiv($totalMinutes, 60);
@@ -435,7 +435,7 @@ class Reservation extends Model implements HasMedia
         $pickup = Carbon::parse($this->pickup_date . ' ' . $this->pickup_time);
         $return = Carbon::parse($this->return_date . ' ' . $this->return_time);
 
-        $totalMinutes = $pickup->diffInMinutes($return);
+        $totalMinutes = (int) $pickup->diffInMinutes($return, true);
 
         // Convert to hours (round minutes >= 30)
         $hours = intdiv($totalMinutes, 60);
@@ -540,6 +540,20 @@ class Reservation extends Model implements HasMedia
     public function discountDetails()
     {
         return $this->hasMany(DiscountDetail::class);
+    }
+
+    // Completed: superadmin only. Cancelled: locked for everyone.
+    public function canChangeDiscounts(): bool
+    {
+        if ($this->status === 'Cancelled') {
+            return false;
+        }
+
+        if ($this->status === 'Completed') {
+            return auth()->check() && auth()->user()->isA('superadmin');
+        }
+
+        return true;
     }
 
     public function getBaseVehicleRate()

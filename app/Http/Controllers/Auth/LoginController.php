@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\CarController;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +30,7 @@ class LoginController extends Controller
 
         if (Auth::attempt($request->only('username', 'password'), $request->boolean('remember'))) {
             $request->session()->regenerate();
-            return redirect()->intended(route('myaccount.index'));
+            return redirect()->intended(CarController::afterLoginUrl());
         }
 
         return back()->withErrors(['username' => 'Invalid username or password.'])->withInput();

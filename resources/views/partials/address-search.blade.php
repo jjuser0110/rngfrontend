@@ -48,6 +48,8 @@ window.initAddressSearch = function (onChange) {
     function useTextBox(input) {
         $('#' + input.id + '_google').remove();
         $('#' + input.id + '_selected').remove();
+        $('#' + input.id + '_change').remove();
+        input.readOnly = false;
         input.hidden = false;
     }
 
@@ -57,37 +59,59 @@ window.initAddressSearch = function (onChange) {
 
         $('.address-input').each(function () {
             const input = this;
-            let googleBox;
-            try {
-                googleBox = new Element({ includedRegionCodes: ['my'] });
-            } catch (e) {
+
+            // The Google box can't show an address saved earlier (e.g. from the home page search), so a saved
+            // address stays visible in the text box; "Change address" opens the Google search
+            if (input.value) {
+                input.readOnly = true;
+                $('<a href="#" class="d-inline-block mt-1 fs-12 fw-semibold text-decoration-none" style="color:#e9993e;">Change address</a>')
+                    .attr('id', input.id + '_change')
+                    .insertAfter(input)
+                    .on('click', function (event) {
+                        event.preventDefault();
+                        $(this).remove();
+                        input.readOnly = false;
+                        attachSearch(input, Element);
+                        $('#' + input.id + '_google').trigger('focus');
+                    });
                 return;
             }
-            googleBox.id = input.id + '_google';
-            googleBox.classList.add('place-autocomplete');
-            input.before(googleBox);
-            input.hidden = true;
-            $('<small class="d-block mt-1 address-selected" style="color:#6c757d;"></small>')
-                .attr('id', input.id + '_selected')
-                .text(input.value ? 'Selected: ' + input.value : '')
-                .insertAfter(input);
 
-            // Current API: gmp-select with a place prediction
-            googleBox.addEventListener('gmp-select', async function (event) {
-                if (!event.placePrediction) return;
-                const place = event.placePrediction.toPlace();
-                await place.fetchFields({ fields: ['formattedAddress', 'displayName'] });
-                setAddress(input, fullAddress(place));
-            });
-            // Older API versions: gmp-placeselect with a place
-            googleBox.addEventListener('gmp-placeselect', async function (event) {
-                if (!event.place) return;
-                await event.place.fetchFields({ fields: ['formattedAddress', 'displayName'] });
-                setAddress(input, fullAddress(event.place));
-            });
-            googleBox.addEventListener('gmp-error', function () {
-                useTextBox(input);
-            });
+            attachSearch(input, Element);
+        });
+    }
+
+    function attachSearch(input, Element) {
+        let googleBox;
+        try {
+            googleBox = new Element({ includedRegionCodes: ['my'] });
+        } catch (e) {
+            return;
+        }
+        googleBox.id = input.id + '_google';
+        googleBox.classList.add('place-autocomplete');
+        input.before(googleBox);
+        input.hidden = true;
+        $('<small class="d-block mt-1 address-selected" style="color:#6c757d;"></small>')
+            .attr('id', input.id + '_selected')
+            .text(input.value ? 'Selected: ' + input.value : '')
+            .insertAfter(input);
+
+        // Current API: gmp-select with a place prediction
+        googleBox.addEventListener('gmp-select', async function (event) {
+            if (!event.placePrediction) return;
+            const place = event.placePrediction.toPlace();
+            await place.fetchFields({ fields: ['formattedAddress', 'displayName'] });
+            setAddress(input, fullAddress(place));
+        });
+        // Older API versions: gmp-placeselect with a place
+        googleBox.addEventListener('gmp-placeselect', async function (event) {
+            if (!event.place) return;
+            await event.place.fetchFields({ fields: ['formattedAddress', 'displayName'] });
+            setAddress(input, fullAddress(event.place));
+        });
+        googleBox.addEventListener('gmp-error', function () {
+            useTextBox(input);
         });
     }
 
