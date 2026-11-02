@@ -27,7 +27,7 @@
             <span class="d-block text-ink text-break">{{ $placeOf('return') }}</span>
         </div>
         <div class="col-md-2 text-md-end">
-            <span class="d-block fs-11 fw-bold text-uppercase text-soft">Total</span>
+            <span class="d-block fs-11 fw-bold text-uppercase text-soft">{{ $booking->status === 'Pending' ? 'Estimated total' : 'Total' }}</span>
             <span class="d-block fw-bold text-ink">RM {{ number_format($booking->total_price, 2) }}</span>
         </div>
     </div>

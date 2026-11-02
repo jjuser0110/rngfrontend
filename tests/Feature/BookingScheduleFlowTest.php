@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\Location;
+use App\Models\Reservation;
 use App\Models\User;
 use App\Models\VehicleClass;
 use App\Models\VehicleModel;
@@ -217,5 +218,38 @@ class BookingScheduleFlowTest extends TestCase
 
         $this->get(route('login'))->assertOk();
         $this->login($user)->assertRedirect(route('myaccount.index'));
+    }
+
+    public function test_booking_pages_follow_the_status_without_promising_an_email(): void
+    {
+        $user = $this->makeCustomerUser();
+        $reservation = Reservation::create([
+            'customer_id' => $user->customer_id, 'vehicle_class_id' => $this->vehicleModel->vehicle_class_id,
+            'vehicle_model_id' => $this->vehicleModel->id, 'pickup_location_id' => $this->branch->id, 'return_location_id' => $this->branch->id,
+            'pickup_date' => $this->search['pickup_date'], 'pickup_time' => '14:30',
+            'return_date' => $this->search['return_date'], 'return_time' => '16:00',
+            'status' => 'Pending', 'source' => 'frontend', 'created_by' => $user->id,
+        ]);
+        $this->actingAs($user);
+
+        // Waiting for staff: estimated price, contact by WhatsApp, phone or email
+        $this->get(route('cars.confirmed', $reservation))->assertOk()
+            ->assertSee('Booking request sent')
+            ->assertSee('Estimated total')
+            ->assertSee('WhatsApp, phone or email')
+            ->assertDontSee('email your quotation');
+        $this->get(route('myaccount.index'))->assertOk()->assertSee('Request received')->assertSee('Estimated total');
+
+        // Staff confirmed it as a quotation in rngcarrental: final price
+        $reservation->update(['status' => 'Quote']);
+        $this->get(route('cars.confirmed', $reservation))->assertOk()
+            ->assertSee('Your quotation is ready')
+            ->assertSee('Quotation ready')
+            ->assertDontSee('Estimated total')
+            ->assertDontSee('Waiting for confirmation');
+        $this->get(route('myaccount.index'))->assertOk()
+            ->assertSee('Quotation ready')
+            ->assertDontSee('Quotation sent')
+            ->assertDontSee('Estimated total');
     }
 }

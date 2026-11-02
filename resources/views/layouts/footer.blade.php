@@ -6,7 +6,7 @@
             <div class="{{ $footerCol }}">
                 <div class="widget">
                     <h5>About Rent N Go</h5>
-                    <p>Car, bike and bus rental in Kuching, Sarawak, with homestays and tours to complete your trip. Book online, and our team confirms your quotation by email.</p>
+                    <p>Car, bike and bus rental in Kuching, Sarawak, with homestays and tours to complete your trip. Book online, and our team sends your quotation by WhatsApp, phone or email.</p>
                 </div>
             </div>
 

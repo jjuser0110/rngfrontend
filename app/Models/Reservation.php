@@ -803,6 +803,12 @@ class Reservation extends Model implements HasMedia
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** Website booking requests waiting for staff (sidebar badge and the "Web Requests" tab). */
+    public function scopeWebRequests($query)
+    {
+        return $query->where('source', 'frontend')->where('status', 'Pending');
+    }
+
     public function scopeForUser($query, $user)
     {
         return $query->whereIn(

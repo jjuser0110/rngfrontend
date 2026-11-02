@@ -7,7 +7,7 @@ class BookingStatus
 {
     private const STATUSES = [
         'Pending'   => ['Request received', 'status-pending'],
-        'Quote'     => ['Quotation sent', 'status-quote'],
+        'Quote'     => ['Quotation ready', 'status-quote'],
         'Open'      => ['Confirmed', 'status-confirmed'],
         'Rental'    => ['On rent', 'status-rental'],
         'Completed' => ['Completed', 'status-completed'],

@@ -55,9 +55,12 @@
             @if ($isConfirmed)
                 @php
                     $whatsappLink = \App\Support\WhatsApp::link("Hi, I have a question about my booking request {$reservation->code}.");
+                    // Staff confirm the price in rngcarrental (Quote); until then the total is the website's estimate
+                    $isPending = $reservation->status === 'Pending';
+                    [$statusLabel] = \App\Support\BookingStatus::meta($reservation->status);
                     $nextSteps = [
                         ['fa-search', 'We check the car', "Our team checks the car for your dates. If this model isn't available, we'll suggest a similar one."],
-                        ['fa-envelope-o', 'You get a quotation', "We email the final price and how to pay the deposit to {$customer->email}."],
+                        ['fa-whatsapp', 'You get a quotation', 'Our team contacts you by WhatsApp, phone or email with the final price and how to pay the deposit. You can also see it in My Account.'],
                         ['fa-id-card-o', 'Pick up your car', 'Bring your IC or passport and driving licence on the pick-up day.'],
                     ];
                 @endphp
@@ -65,8 +68,16 @@
                 {{-- Success --}}
                 <div class="card border border-light shadow-sm rounded-3 bg-white p-4 p-md-5 mb-4 text-center sent-hero">
                     <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
-                    <h2 class="fw-bold fs-24 text-ink mb-2">Booking request sent</h2>
-                    <p class="fs-14 text-soft mb-3">Thank you, {{ $customer->first_name ?? 'we\'ve got it' }}! We'll email your quotation to <strong class="text-ink">{{ $customer->email }}</strong>.</p>
+                    @if ($isPending)
+                        <h2 class="fw-bold fs-24 text-ink mb-2">Booking request sent</h2>
+                        <p class="fs-14 text-soft mb-3">Thank you, {{ $customer->first_name ?? 'we\'ve got it' }}! Our team will contact you by WhatsApp, phone or email with your final price.</p>
+                    @elseif ($reservation->status === 'Quote')
+                        <h2 class="fw-bold fs-24 text-ink mb-2">Your quotation is ready</h2>
+                        <p class="fs-14 text-soft mb-3">The final price is below. Our team will contact you by WhatsApp, phone or email about paying the deposit.</p>
+                    @else
+                        <h2 class="fw-bold fs-24 text-ink mb-2">Your booking</h2>
+                        <p class="fs-14 text-soft mb-3">Status: <strong class="text-ink">{{ $statusLabel }}</strong></p>
+                    @endif
                     <span class="booking-code"><span class="text-soft fw-normal me-1">Booking no.</span>{{ $reservation->code }}</span>
                 </div>
 
@@ -90,7 +101,7 @@
                                             @if ($vehicleModel?->vehicleClass)
                                                 <span class="chip">{{ $vehicleModel->vehicleClass->name }}</span>
                                             @endif
-                                            <span class="status-pill"><i class="fa fa-clock-o me-1" aria-hidden="true"></i>Waiting for confirmation</span>
+                                            <span class="status-pill"><i class="fa fa-clock-o me-1" aria-hidden="true"></i>{{ $isPending ? 'Waiting for confirmation' : $statusLabel }}</span>
                                         </div>
 
                                         <ul class="trip-list list-unstyled mb-0">
@@ -154,10 +165,10 @@
                                 @endforeach
                             </div>
                             <div class="rate-box d-flex justify-content-between align-items-center mt-3">
-                                <span class="fs-13 text-soft">Estimated total</span>
+                                <span class="fs-13 text-soft">{{ $isPending ? 'Estimated total' : 'Total' }}</span>
                                 <span class="fw-bold fs-20 text-ink">RM {{ number_format($reservation->total_price, 2) }}</span>
                             </div>
-                            <p class="fs-12 text-soft mt-2 mb-0">Plus a refundable security deposit of RM {{ number_format($reservation->security_deposit, 2) }}. The final price is in your quotation.</p>
+                            <p class="fs-12 text-soft mt-2 mb-0">Plus a refundable security deposit of RM {{ number_format($reservation->security_deposit, 2) }}.{{ $isPending ? ' Our team confirms the final price in your quotation.' : '' }}</p>
                         </div>
 
                         {{-- Help --}}
