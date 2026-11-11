@@ -28,12 +28,23 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
-        if (Auth::attempt($request->only('username', 'password'), $request->boolean('remember'))) {
-            $request->session()->regenerate();
-            return redirect()->intended(CarController::afterLoginUrl());
+        if (!Auth::validate($request->only('username', 'password'))) {
+            return back()->withErrors(['username' => 'Invalid username or password.'])->withInput();
         }
 
-        return back()->withErrors(['username' => 'Invalid username or password.'])->withInput();
+        // Only active customer accounts sign in here (staff use rngcarrental, which blocks customers the same way)
+        $user = Auth::getLastAttempted();
+        if (!$user->customer_id) {
+            return back()->withErrors(['username' => "This account can't be used on the booking website."])->withInput();
+        }
+        if ($user->is_active != 1) {
+            return back()->withErrors(['username' => 'Your account is inactive. Please contact us.'])->withInput();
+        }
+
+        Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate();
+
+        return redirect()->intended(CarController::afterLoginUrl());
     }
 
     public function logout(Request $request)

@@ -604,6 +604,9 @@ $(function () {
         function choose(value) {
             $input.val(value).removeClass('is-invalid');
             sessionToken = null; // one Google session per chosen address
+            // Drop a search still waiting or on its way, so the list doesn't open again over the form
+            clearTimeout(timer);
+            requestId++;
             close();
         }
 
@@ -632,7 +635,13 @@ $(function () {
             event.preventDefault();
             choose($(this).data('value'));
         });
-        $input.on('blur', function () { setTimeout(close, 150); });
+        $input.on('blur', function () {
+            setTimeout(function () {
+                clearTimeout(timer);
+                requestId++;
+                close();
+            }, 150);
+        });
     });
 
     // Drop-off: copy the pick-up place (an empty drop-off also means the same place)

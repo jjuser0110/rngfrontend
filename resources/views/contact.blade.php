@@ -33,39 +33,38 @@
                     <div class="col-lg-8 mb-sm-30">
 
                         <h3>Do you have any question?</h3>
-                    
-                        <form name="contactForm" id="contact_form" class="form-border" method="post" action="contact.php">
+                        <p>Your message opens in WhatsApp, ready to send to our team.</p>
+
+                        {{-- Sent through WhatsApp for now (no mail set up yet): the script below opens a chat with the message typed in --}}
+                        <form name="contactForm" id="contact_form" class="form-border" data-whatsapp="{{ \App\Support\WhatsApp::link() }}">
                                 <div class="row">
                                     <div class="col-md-4 mb10">
                                         <div class="field-set">
-                                            <input type="text" name="name" id="name" class="form-control" placeholder="Your Name" required>
+                                            <input type="text" name="name" id="name" class="form-control" placeholder="Your Name" maxlength="100" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4 mb10">
                                         <div class="field-set">
-                                            <input type="text" name="email" id="email" class="form-control" placeholder="Your Email" required>
+                                            <input type="email" name="email" id="email" class="form-control" placeholder="Your Email" maxlength="150" required>
                                         </div>
                                     </div>
                                     <div class="col-md-4 mb10">
                                         <div class="field-set">
-                                            <input type="text" name="phone" id="phone" class="form-control" placeholder="Your Phone" required>
+                                            <input type="tel" name="phone" id="phone" class="form-control" placeholder="Your Phone" maxlength="20" required>
                                         </div>
                                     </div>
                                 </div>
-                                    
+
                                 <div class="field-set mb20">
-                                    <textarea name="message" id="message" class="form-control" placeholder="Your Message" required></textarea>
+                                    <textarea name="message" id="message" class="form-control" placeholder="Your Message" maxlength="1000" required></textarea>
                                 </div>
 
                                 <div id='submit' class="mt20">
-                                    <input type='submit' id='send_message' value='Send Message' class="btn-main">
+                                    <button type="submit" id="send_message" class="btn-main"><i class="fa fa-whatsapp me-2" aria-hidden="true"></i>Send via WhatsApp</button>
                                 </div>
 
                                 <div id="success_message" class='success'>
-                                    Your message has been sent successfully. Refresh this page if you want to send more messages.
-                                </div>
-                                <div id="error_message" class='error'>
-                                    Sorry there was an error sending your form.
+                                    WhatsApp has opened with your message. Tap Send in WhatsApp to send it to us.
                                 </div>
                             </form>
                 </div>
@@ -105,4 +104,23 @@
 </div>
 <!-- content close -->
 
+@endsection
+
+@section('scripts')
+<script>
+    // Open WhatsApp with the form typed in; the customer taps Send there
+    document.getElementById('contact_form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const form = event.target;
+        const field = (name) => form.elements[name].value.trim();
+        const text = 'Hi Rent N Go, I have a question.\n\n'
+            + 'Name: ' + field('name') + '\n'
+            + 'Email: ' + field('email') + '\n'
+            + 'Phone: ' + field('phone') + '\n\n'
+            + field('message');
+
+        window.open(form.dataset.whatsapp + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+        document.getElementById('success_message').style.display = 'block';
+    });
+</script>
 @endsection

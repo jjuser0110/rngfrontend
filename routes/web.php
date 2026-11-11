@@ -13,11 +13,10 @@ Route::get('/register',  [RegisterController::class, 'showRegistrationForm'])->n
 Route::post('/register', [RegisterController::class, 'register']);
 Route::post('/register/validate-step', [RegisterController::class, 'validateStep'])->name('register.validate-step')->middleware('throttle:30,1');
 
-Route::post('/attachments/store', [App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.store');
-Route::delete('/attachments/{media}', [App\Http\Controllers\AttachmentController::class, 'destroy'])->name('attachments.destroy');
+Route::post('/attachments/store', [App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.store')->middleware('throttle:20,1');
+Route::delete('/attachments/{media}', [App\Http\Controllers\AttachmentController::class, 'destroy'])->name('attachments.destroy')->middleware('throttle:20,1');
 
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
-Route::get('/test', [WelcomeController::class, 'test'])->name('test');
 Route::get('/aboutus', [WelcomeController::class, 'aboutus'])->name('aboutus');
 Route::get('/contact', [WelcomeController::class, 'contact'])->name('contact');
 Route::post('/track-event', [WelcomeController::class, 'trackEvent'])->name('track.event');
@@ -50,11 +49,6 @@ Route::middleware(['auth'])->prefix('/myaccount')->as('myaccount.')->group(funct
     Route::get('/', [WelcomeController::class, 'myaccount'])->name('index');
     Route::put('/profile', [WelcomeController::class, 'updateProfile'])->name('profile.update');
 });
-
-use App\Http\Controllers\QuotationController;
-
-// Route for downloading the quotation
-Route::post('/quotation/download', [QuotationController::class, 'downloadQuotation'])->name('quotation.download');
 
 Route::view('/terms', 'terms')->name('terms');
 Route::view('/privacy', 'privacy')->name('privacy');

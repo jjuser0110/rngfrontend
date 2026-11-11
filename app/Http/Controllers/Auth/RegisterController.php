@@ -37,7 +37,8 @@ class RegisterController extends Controller
         $rules = [
             1 => [
                 'username'              => 'required|string|max:255|unique:users,username|unique:customers,username',
-                'email'                 => 'required|string|email|max:255|unique:customers,email|unique:users,email',
+                // Unique among logins only: a customer staff added in rngcarrental can still sign up (see register())
+                'email'                 => 'required|string|email|max:255|unique:users,email',
                 'password'              => 'required|string|min:6|confirmed',
                 'password_confirmation' => 'required',
             ],
@@ -119,10 +120,16 @@ class RegisterController extends Controller
         $data['phone_number'] = PhoneNumber::normalize($data['phone_number']);
 
         $user = DB::transaction(function () use ($data, $request) {
-            $customer = Customer::create($data);
+            // Already a customer added by staff (same email, IC and phone, no login yet): give that record the login
+            $customer = $this->walkInCustomer($data);
+            if ($customer) {
+                $customer->update($data);
+            } else {
+                $customer = Customer::create($data);
+            }
 
             if ($request->temp_uuid) {
-                $temp = TemporaryUpload::where('uuid', $request->temp_uuid)->first();
+                $temp = TemporaryUpload::ofSession($request->temp_uuid);
                 if ($temp) {
                     foreach ($temp->getMedia('attachments') as $media) {
                         $media->move($customer, 'attachments');
@@ -156,5 +163,27 @@ class RegisterController extends Controller
 
         // Back to where the customer was heading (e.g. the cart after choosing a car), or their booking in progress
         return redirect()->intended(CarController::afterLoginUrl());
+    }
+
+    /**
+     * A customer staff added in rngcarrental with this email, still without a login.
+     * The IC and phone must match too, so typing someone's email alone can't take over their record.
+     */
+    private function walkInCustomer(array $data): ?Customer
+    {
+        $ic = fn ($value) => strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $value));
+        // Staff often save local numbers (012...); the website saves +60...
+        $phone = function ($value) {
+            $digits = preg_replace('/\D/', '', (string) $value);
+
+            return str_starts_with($digits, '0') ? '60' . substr($digits, 1) : $digits;
+        };
+
+        return Customer::where('email', $data['email'])
+            ->whereNotIn('id', User::whereNotNull('customer_id')->select('customer_id'))
+            ->get()
+            ->first(fn ($customer) => $ic($customer->ic) !== ''
+                && $ic($customer->ic) === $ic($data['ic'])
+                && $phone($customer->phone_number) === $phone($data['phone_number']));
     }
 }

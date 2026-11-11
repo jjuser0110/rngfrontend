@@ -55,11 +55,6 @@ class WelcomeController extends Controller
         ]);
     }
 
-    public function test()
-    {
-        return view('test');
-    }
-
     public function aboutus()
     {
         return view('aboutus');
@@ -136,7 +131,7 @@ class WelcomeController extends Controller
         $customer->postcode        = $request->postcode;
 
         if ($request->filled('temp_uuid')) {
-            $temp = TemporaryUpload::where('uuid', $request->temp_uuid)->first();
+            $temp = TemporaryUpload::ofSession($request->temp_uuid);
             if ($temp) {
                 // Clear existing attachments if replacing/updating
                 $customer->clearMediaCollection('attachments');
