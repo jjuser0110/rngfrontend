@@ -171,7 +171,7 @@
                                             $unitLabel = $chargeType->unit === '/ Day' ? '/ day' : ($chargeType->unit === 'One Time' ? 'one time' : $chargeType->unit);
                                         @endphp
                                         <div class="col-md-4 col-sm-6 col-12">
-                                            @if ($chargeType->max)
+                                            @if ($chargeType->max && !$chargeType->isPricedByStaff())
                                                 {{-- Quantity extra (e.g. 2 baby seats) --}}
                                                 <div class="addon-card-label p-3 rounded-2 h-100 d-flex flex-column justify-content-between {{ $quantity > 0 ? 'is-selected' : '' }}">
                                                     <label class="fw-bold fs-13 mb-2" for="charge_{{ $chargeType->id }}" style="color: #33383c;"><i class="fa {{ $icon }} me-2" style="color: #e9993e;"></i> {{ $chargeType->name }}</label>
@@ -193,7 +193,9 @@
                                                         <span class="fw-bold fs-13" style="color: #33383c;"><i class="fa {{ $icon }} me-2" style="color: #e9993e;"></i> {{ $chargeType->name }}</span>
                                                         <span class="custom-check-icon flex-shrink-0"><i class="fa fa-check fs-10"></i></span>
                                                     </div>
-                                                    <span class="fs-12 fw-semibold" style="color: #6c757d;">+RM {{ number_format($amount, 2) }} {{ $unitLabel }}</span>
+                                                    @unless ($chargeType->isPricedByStaff())
+                                                        <span class="fs-12 fw-semibold" style="color: #6c757d;">+RM {{ number_format($amount, 2) }} {{ $unitLabel }}</span>
+                                                    @endunless
                                                 </label>
                                             @endif
                                         </div>

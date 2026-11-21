@@ -199,8 +199,18 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label fw-semibold fs-13" for="ic" style="color: #495057;">IC / Passport Number <span class="text-danger">*</span></label>
-                                        <input type="text" id="ic" class="form-control fs-13 py-2 @error('ic') is-invalid @enderror" name="ic" value="{{ old('ic') }}" placeholder="IC or Passport ID" style="border-color: #dee2e6;">
+                                        <label class="form-label fw-semibold fs-13" for="id_type" style="color: #495057;">ID Type <span class="text-danger">*</span></label>
+                                        <select id="id_type" name="id_type" class="form-select fs-13 py-2 @error('id_type') is-invalid @enderror" style="border-color: #dee2e6;">
+                                            @foreach (\App\Rules\IdNumber::TYPES as $value => $label)
+                                                <option value="{{ $value }}" {{ old('id_type', 'ic') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                        <div class="invalid-feedback" id="id_type-error">@error('id_type') {{ $message }} @else Please choose IC or Passport. @enderror</div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold fs-13" for="ic" style="color: #495057;"><span id="ic-label">IC Number</span> <span class="text-danger">*</span></label>
+                                        <input type="text" id="ic" class="form-control fs-13 py-2 @error('ic') is-invalid @enderror" name="ic" value="{{ old('ic') }}" placeholder="e.g. 201003-13-5111" maxlength="20" style="border-color: #dee2e6;">
                                         <div class="invalid-feedback" id="ic-error">@error('ic') {{ $message }} @else IC / Passport number is required. @enderror</div>
                                     </div>
 
@@ -211,16 +221,16 @@
                                     </div>
 
                                     <div class="col-12 mt-3">
-                                        <label class="form-label fw-semibold fs-13 mb-2" style="color: #495057;">Upload Driving License Document <span class="text-danger">*</span></label>
+                                        <label class="form-label fw-semibold fs-13 mb-2" style="color: #495057;">Upload Driving License and IC / Passport <span class="text-danger">*</span></label>
 
-                                        <!-- Single Upload Display Container -->
+                                        <!-- Uploaded files (up to 5) -->
                                         <div id="attachment-list" class="mb-3"></div>
 
                                         <!-- Drag & Drop Upload Box Dropzone Style -->
                                         <div class="p-4 border border-2 border-dashed rounded bg-white text-center position-relative" style="border-color: #e9993e !important; cursor: pointer;" id="dropzone-box">
                                             <div class="py-2">
                                                 <i class="fa fa-cloud-upload fa-2x mb-2" style="color: #e9993e;"></i>
-                                                <p class="text-muted fs-13 mb-1">Drag and drop your file here (Max 1 file)</p>
+                                                <p class="text-muted fs-13 mb-1">Drag and drop your files here (up to 5 files, 5 MB each)</p>
                                                 <p class="text-muted fs-11 mb-2">or</p>
                                                 <div class="d-flex justify-content-center gap-2">
                                                     <button type="button" class="btn btn-sm fs-12 bg-white" id="btn-add" style="border-color: #e9993e; color: #e9993e;">
@@ -235,8 +245,7 @@
                                             {{-- Hidden temp uuid --}}
                                             <input type="hidden" id="temp_uuid" name="temp_uuid">
 
-                                            {{-- Hidden inputs with display: none (removed multiple) --}}
-                                            <input type="file" id="attachments" style="display: none;" accept="image/*,.pdf,.doc,.docx">
+                                            <input type="file" id="attachments" style="display: none;" accept="image/*,.pdf,.doc,.docx" multiple>
                                             <input type="file" id="camera" capture="environment" style="display: none;" accept="image/*">
                                         </div>
                                     </div>
@@ -295,11 +304,6 @@
 @section('scripts')
 @include('partials.phone-input')
 <script>
-window.mediaConfig = {
-    modelType: null,
-    modelId: null,
-    collection: 'attachments'
-};
 
 $(document).ready(function() {
 
@@ -388,6 +392,23 @@ $(document).ready(function() {
 
         return isValid;
     }
+
+    // IC: digits only, dashes added as typed (201003-13-5111). Passport: letters and numbers, as typed.
+    function updateIdField() {
+        const isIc = $('#id_type').val() === 'ic';
+        $('#ic-label').text(isIc ? 'IC Number' : 'Passport Number');
+        $('#ic').attr('placeholder', isIc ? 'e.g. 201003-13-5111' : 'e.g. A12345678').attr('inputmode', isIc ? 'numeric' : 'text');
+    }
+    $('#id_type').on('change', function () {
+        $('#ic').val('').removeClass('is-invalid');
+        updateIdField();
+    });
+    $('#ic').on('input', function () {
+        if ($('#id_type').val() !== 'ic') return;
+        const digits = this.value.replace(/\D/g, '').slice(0, 12);
+        this.value = [digits.slice(0, 6), digits.slice(6, 8), digits.slice(8)].filter(Boolean).join('-');
+    });
+    updateIdField();
 
     function validateStep3() {
         let isValid = true;
@@ -541,11 +562,45 @@ $(document).ready(function() {
         $('#indicator-step-2 span').removeClass('text-muted').addClass('fw-bold text-dark');
     });
 
+    // Check step 3 on the server first, so an error (e.g. a bad IC) shows here instead of reloading the page
     $('#form_register').on('submit', function(e) {
-        if (!validateStep3()) {
-            e.preventDefault();
-        }
+        e.preventDefault();
+        if (!validateStep3()) return;
+
+        const form = this;
+        checkStepOnServer(3, $('#send_message'), function () {
+            $('#send_message').prop('disabled', true);
+            form.submit(); // the browser's own submit, without this check again
+        });
     });
+
+    // Back from the server with errors (e.g. a username taken meanwhile): open the step that has the first one
+    function showStep(step) {
+        $('.wizard-step-content').addClass('d-none');
+        $('#step-' + step).removeClass('d-none');
+        for (let i = 1; i <= 3; i++) {
+            const $circle = $('#indicator-step-' + i + ' div');
+            const $label = $('#indicator-step-' + i + ' span');
+            $circle.removeClass('text-muted bg-light border shadow-sm').addClass('text-white').css('background-color', '');
+            $label.removeClass('fw-bold text-dark text-muted');
+            if (i < step) {
+                $circle.css('background-color', '#198754').html('<i class="fa fa-check fs-11"></i>');
+                $label.addClass('text-muted');
+            } else if (i === step) {
+                $circle.addClass('shadow-sm').css('background-color', '#e9993e').html(i);
+                $label.addClass('fw-bold text-dark');
+            } else {
+                $circle.removeClass('text-white').addClass('text-muted bg-light border').html(i);
+                $label.addClass('text-muted');
+            }
+        }
+    }
+    @if ($errors->any())
+        (function () {
+            const $step = $('#form_register .is-invalid, #form_register .invalid-feedback.d-block').first().closest('.wizard-step-content');
+            if ($step.length) showStep(parseInt($step.attr('id').replace('step-', ''), 10));
+        })();
+    @endif
 
     // Attachment and Dropzone triggers
     $('#btn-add').on('click', function(e) {
@@ -578,84 +633,77 @@ $(document).ready(function() {
     });
 
     dropzone.on('drop', function(e) {
-        let droppedFiles = e.originalEvent.dataTransfer.files;
-        if (droppedFiles.length > 0) {
-            processAndUploadFile(droppedFiles[0]);
-        }
+        uploadFiles(e.originalEvent.dataTransfer.files);
     });
 
     $('#attachments, #camera').on('change', function () {
-        if (this.files.length > 0) {
-            processAndUploadFile(this.files[0]);
-            this.value = '';
-        }
+        uploadFiles(this.files);
+        this.value = '';
     });
 
-    function processAndUploadFile(file) {
-        let formData = new FormData();
-        if (window.mediaConfig.modelType !== null) formData.append('model_type', window.mediaConfig.modelType);
-        if (window.mediaConfig.modelId !== null) formData.append('model_id', window.mediaConfig.modelId);
-        formData.append('collection', window.mediaConfig.collection);
+    const MAX_FILES = 5;
 
+    // One at a time, so every file joins the same temporary upload (temp_uuid)
+    function uploadFiles(files) {
+        let queue = Array.from(files || []);
+        const room = MAX_FILES - $('#attachment-list .attachment-row').length;
+        if (queue.length > room) {
+            alert(`You can upload up to ${MAX_FILES} files.` + (room > 0 ? ` Only the first ${room} will be added.` : ''));
+            queue = queue.slice(0, Math.max(room, 0));
+        }
+
+        const next = () => {
+            const file = queue.shift();
+            if (file) uploadFile(file, next);
+        };
+        next();
+    }
+
+    function uploadFile(file, done) {
+        let formData = new FormData();
         let uuid = $('#temp_uuid').val();
         if (uuid) formData.append('uuid', uuid);
-
         formData.append('attachments[]', file);
 
-        let existingRow = $('#attachment-list .attachment-row');
-        let oldMediaId = existingRow.attr('data-id');
+        $.ajax({
+            url: "{{ route('attachments.store') }}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+            success: function (res) {
+                $('#temp_uuid').val(res.uuid);
 
-        let uploadAction = function() {
-            $.ajax({
-                url: "{{ route('attachments.store') }}",
-                type: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                success: function (res) {
-                    $('#temp_uuid').val(res.uuid);
-                    $('#attachment-list').empty();
+                let fileData = res.files[res.files.length - 1];
+                let fileUrl = fileData.url.startsWith('http') ? fileData.url : window.location.origin + fileData.url;
+                let fileName = $('<div>').text(file.name || 'Uploaded Document').html();
 
-                    let fileData = res.files[res.files.length - 1];
-                    let fileUrl = fileData.url.startsWith('http') ? fileData.url : window.location.origin + fileData.url;
-                    let fileName = file.name || 'Uploaded Document';
-
-                    $('#attachment-list').append(`
-                        <div class="d-flex align-items-center justify-content-between p-2 mb-2 border rounded bg-white shadow-sm attachment-row" data-id="${fileData.id}">
-                            <div class="d-flex align-items-center overflow-hidden">
-                                <i class="fa fa-file-text-o fa-lg me-3"></i>
-                                <div class="text-truncate">
-                                    <span class="d-block fs-13 fw-semibold text-dark text-truncate attachment-preview" style="cursor: pointer;" data-full="${fileUrl}">${fileName}</span>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-3 ms-2">
-                                <i class="fa fa-check text-success fs-14"></i>
-                                <button type="button" class="btn btn-sm text-danger p-0 delete-attachment border-0 bg-transparent" data-id="${fileData.id}" title="Delete">
-                                    <i class="fa fa-trash fs-14"></i>
-                                </button>
+                $('#attachment-list').append(`
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-2 border rounded bg-white shadow-sm attachment-row" data-id="${fileData.id}">
+                        <div class="d-flex align-items-center overflow-hidden">
+                            <i class="fa fa-file-text-o fa-lg me-3"></i>
+                            <div class="text-truncate">
+                                <span class="d-block fs-13 fw-semibold text-dark text-truncate attachment-preview" style="cursor: pointer;" data-full="${fileUrl}">${fileName}</span>
                             </div>
                         </div>
-                    `);
-                },
-                error: function() {
-                    alert('Failed to upload file. Please try again.');
-                }
-            });
-        };
-
-        if (oldMediaId) {
-            $.ajax({
-                url: `/attachments/${oldMediaId}`,
-                type: 'DELETE',
-                data: { _token: '{{ csrf_token() }}' },
-                complete: function() {
-                    uploadAction();
-                }
-            });
-        } else {
-            uploadAction();
-        }
+                        <div class="d-flex align-items-center gap-3 ms-2">
+                            <i class="fa fa-check text-success fs-14"></i>
+                            <button type="button" class="btn btn-sm text-danger p-0 delete-attachment border-0 bg-transparent" data-id="${fileData.id}" title="Delete">
+                                <i class="fa fa-trash fs-14"></i>
+                            </button>
+                        </div>
+                    </div>
+                `);
+            },
+            error: function(xhr) {
+                // Show why (wrong type, too big, too many uploads) instead of a generic message
+                const errors = xhr.responseJSON && xhr.responseJSON.errors;
+                const reason = errors ? Object.values(errors)[0][0].replace(/attachments\.\d+ field/, 'file') : (xhr.status === 413 ? 'The file is too large.' : 'Please try again.');
+                alert(`Could not upload ${file.name}: ${reason}`);
+            },
+            complete: done
+        });
     }
 
     $(document).on('click', '.delete-attachment', function (e) {

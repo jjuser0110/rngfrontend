@@ -32,7 +32,12 @@
         </div>
     </div>
 
-    @if ($booking->isFrontend())
-        <a href="{{ route('cars.confirmed', $booking) }}" class="booking-link fs-12">View request <i class="fa fa-angle-right ms-1" aria-hidden="true"></i></a>
-    @endif
+    <div class="d-flex flex-wrap gap-3">
+        @if ($booking->isFrontend())
+            <a href="{{ route('cars.confirmed', $booking) }}" class="booking-link fs-12">View request <i class="fa fa-angle-right ms-1" aria-hidden="true"></i></a>
+        @endif
+        @if ($booking->hasCustomerInvoice())
+            <a href="{{ route('myaccount.invoice', $booking) }}" class="booking-link fs-12"><i class="fa fa-file-pdf-o me-1" aria-hidden="true"></i> Download invoice {{ $booking->invoice_no }}</a>
+        @endif
+    </div>
 </div>

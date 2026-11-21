@@ -241,6 +241,12 @@ class Reservation extends Model implements HasMedia
         return $this->source === 'frontend';
     }
 
+    /** Customers can download the invoice once staff confirmed the booking (Open), on rent and after it closes. */
+    public function hasCustomerInvoice(): bool
+    {
+        return in_array($this->status, ['Open', 'Rental', 'Completed'], true) && !empty($this->invoice_no);
+    }
+
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);

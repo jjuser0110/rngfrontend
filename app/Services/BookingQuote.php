@@ -175,11 +175,14 @@ class BookingQuote
             if ($quantity <= 0) {
                 continue;
             }
-            $quantity = $chargeType->max ? min($quantity, $chargeType->max) : 1;
+            // Driver: a yes/no request saved at RM 0; staff set the days and price in rngcarrental step 3
+            $quantity = $chargeType->max && !$chargeType->isPricedByStaff() ? min($quantity, $chargeType->max) : 1;
 
-            $amount = $chargeType->name === ChargeType::CDR
-                ? (float) $vehicleModel->rate('insurance')
-                : (float) $chargeType->amount;
+            $amount = match (true) {
+                $chargeType->isPricedByStaff()            => 0.0,
+                $chargeType->name === ChargeType::CDR     => (float) $vehicleModel->rate('insurance'),
+                default                                   => (float) $chargeType->amount,
+            };
             $multiplier = $multiplierFor($chargeType->unit);
 
             $charges[] = [

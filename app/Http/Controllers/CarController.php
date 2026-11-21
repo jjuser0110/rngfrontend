@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChargeType;
 use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Reservation;
@@ -157,7 +158,7 @@ class CarController extends Controller
             'locations'    => $locations,
             'chargeTypes'  => BookingQuote::chargeTypes(),
             'destinations' => BookingQuote::destinations(),
-            'quote'        => BookingQuote::make($vehicleModel, $draft),
+            'quote'        => $this->quoteFor($vehicleModel, $draft),
             'timeSlots'    => BookingQuote::timeSlots(),
         ]);
     }
@@ -182,7 +183,7 @@ class CarController extends Controller
         }
 
         $validated = $this->cleanCartInput($validator->validated());
-        $quote = BookingQuote::make($vehicleModel, $validated);
+        $quote = $this->quoteFor($vehicleModel, $validated);
 
         // Keep the cart's changes, so "Change car" (and the trip bar) show the edited schedule, not the
         // home page search. Proceed (updateCart) still checks everything, including the address.
@@ -225,12 +226,13 @@ class CarController extends Controller
         }
 
         return view('cars.fillinfo', [
-            'isConfirmed'  => false,
-            'customer'     => $customer,
-            'draft'        => $draft,
-            'vehicleModel' => $vehicleModel,
-            'quote'        => BookingQuote::make($vehicleModel, $draft),
-            'locations'    => BookingQuote::locations()->keyBy('id'),
+            'isConfirmed'    => false,
+            'customer'       => $customer,
+            'draft'          => $draft,
+            'vehicleModel'   => $vehicleModel,
+            'quote'          => $this->quoteFor($vehicleModel, $draft),
+            'locations'      => BookingQuote::locations()->keyBy('id'),
+            'licenceExpired' => $customer->licenceExpired(),
         ]);
     }
 
@@ -269,6 +271,11 @@ class CarController extends Controller
             return redirect()->route('myaccount.index')->withErrors('Your account has no customer profile. Please contact us to make a booking.');
         }
 
+        // An expired licence can sign up and browse, but not book until it is renewed in My Account
+        if ($customer->licenceExpired()) {
+            return redirect()->route('cars.fillinfo')->withErrors('Your driving licence has expired. Please update it in My Account before sending a booking request.');
+        }
+
         $validated = $request->validate([
             'phone_number'   => ['required', 'string', 'max:20', new PhoneNumber],
             'customer_notes' => 'nullable|string|max:1000',
@@ -281,7 +288,7 @@ class CarController extends Controller
             return redirect()->route('cars.cart')->withErrors($scheduleCheck);
         }
 
-        $quote = BookingQuote::make($vehicleModel, $draft);
+        $quote = $this->quoteFor($vehicleModel, $draft);
 
         $reservation = DB::transaction(function () use ($customer, $draft, $vehicleModel, $quote, $validated) {
             $customer->update(['phone_number' => PhoneNumber::normalize($validated['phone_number'])]);
@@ -324,6 +331,9 @@ class CarController extends Controller
 
             // Shown to staff in the reservation's comments
             $note = 'Booked on the website.';
+            if (collect($quote['charges'])->contains('name', ChargeType::DRIVER)) {
+                $note .= "\nDriver requested: please set the driver's days and price in step 3.";
+            }
             if (!empty($validated['customer_notes'])) {
                 $note .= "\nCustomer note: " . $validated['customer_notes'];
             }
@@ -359,6 +369,18 @@ class CarController extends Controller
     }
 
     // ---------------------------------------------------------------------
+
+    /** Price for the logged-in customer: the security deposit follows their account (staff can switch it off). */
+    private function quoteFor(VehicleModel $vehicleModel, array $draft): array
+    {
+        $quote = BookingQuote::make($vehicleModel, $draft);
+        $customer = $this->customer();
+        if ($customer) {
+            $quote['security_deposit'] = $customer->securityDeposit();
+        }
+
+        return $quote;
+    }
 
     private function isBookable(?VehicleModel $vehicleModel): bool
     {

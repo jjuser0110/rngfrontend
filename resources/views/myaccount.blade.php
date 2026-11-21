@@ -232,9 +232,20 @@
                                     </div>
 
                                     <div class="row g-3">
+                                        @php $idType = old('id_type', $customer->id_type ?? 'ic'); @endphp
                                         <div class="col-md-6">
-                                            <label class="form-label fw-semibold fs-13" for="ic" style="color: #495057;">IC / Passport Number <span class="text-danger">*</span></label>
-                                            <input type="text" id="ic" class="form-control fs-13 py-2 @error('ic') is-invalid @enderror" name="ic" value="{{ old('ic', $customer->ic ?? '') }}" style="border-color: #dee2e6;">
+                                            <label class="form-label fw-semibold fs-13" for="id_type" style="color: #495057;">ID Type <span class="text-danger">*</span></label>
+                                            <select id="id_type" name="id_type" class="form-select fs-13 py-2 @error('id_type') is-invalid @enderror" style="border-color: #dee2e6;">
+                                                @foreach (\App\Rules\IdNumber::TYPES as $value => $label)
+                                                    <option value="{{ $value }}" {{ $idType === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                                @endforeach
+                                            </select>
+                                            @error('id_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold fs-13" for="ic" style="color: #495057;"><span id="ic-label">{{ $idType === 'passport' ? 'Passport Number' : 'IC Number' }}</span> <span class="text-danger">*</span></label>
+                                            <input type="text" id="ic" class="form-control fs-13 py-2 @error('ic') is-invalid @enderror" name="ic" value="{{ old('ic', $customer->ic ?? '') }}" maxlength="20" style="border-color: #dee2e6;">
                                             @error('ic')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         </div>
 
@@ -245,39 +256,34 @@
                                         </div>
 
                                         <div class="col-12 mt-3">
-                                            <label class="form-label fw-semibold fs-13 mb-2" style="color: #495057;">Upload Driving License Document <span class="text-danger">*</span></label>
+                                            <label class="form-label fw-semibold fs-13 mb-2" style="color: #495057;">Driving License and IC / Passport Documents</label>
 
-                                            {{-- File Preview Row Container --}}
+                                            {{-- Saved files (removed on Save) and new uploads (kept on Save) --}}
                                             <div id="attachment-list" class="mb-3">
-                                                @php
-                                                    $hasMedia = $customer && $customer->hasMedia('attachments');
-                                                    $media = $hasMedia ? $customer->getFirstMedia('attachments') : null;
-                                                    $demoUrl = $media ? $media->getUrl() : asset('images/background/2.jpg');
-                                                    $demoName =$media ? $media->file_name : 'sample_driving_license.jpg';
-                                                    $demoId = $media ? $media->id : 9999;
-                                                @endphp
-
-                                                <div class="d-flex align-items-center justify-content-between p-2 mb-2 border rounded bg-white shadow-sm attachment-row" data-id="{{ $demoId }}">
-                                                    <div class="d-flex align-items-center overflow-hidden">
-                                                        <i class="fa fa-file-image-o fa-lg me-3 text-primary"></i>
-                                                        <div class="text-truncate">
-                                                            <span class="d-block fs-13 fw-semibold text-dark text-truncate attachment-preview" style="cursor: pointer;" data-full="{{ $demoUrl }}">{{ $demoName }} <small class="text-muted fw-normal">(Click to View)</small></span>
+                                                @foreach ($customer ? $customer->getMedia('attachments') : [] as $media)
+                                                    <div class="d-flex align-items-center justify-content-between p-2 mb-2 border rounded bg-white shadow-sm attachment-row" data-id="{{ $media->id }}" data-saved="1">
+                                                        <div class="d-flex align-items-center overflow-hidden">
+                                                            <i class="fa fa-file-image-o fa-lg me-3 text-primary"></i>
+                                                            <div class="text-truncate">
+                                                                <span class="d-block fs-13 fw-semibold text-dark text-truncate attachment-preview" style="cursor: pointer;" data-full="{{ $media->getUrl() }}">{{ $media->file_name }} <small class="text-muted fw-normal">(Click to View)</small></span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-3 ms-2">
+                                                            <i class="fa fa-check text-success fs-14" title="Saved"></i>
+                                                            <button type="button" class="btn btn-sm text-danger p-0 delete-attachment border-0 bg-transparent" data-id="{{ $media->id }}" title="Delete">
+                                                                <i class="fa fa-trash fs-14"></i>
+                                                            </button>
                                                         </div>
                                                     </div>
-                                                    <div class="d-flex align-items-center gap-3 ms-2">
-                                                        <i class="fa fa-check text-success fs-14" title="Active"></i>
-                                                        <button type="button" class="btn btn-sm text-danger p-0 delete-attachment border-0 bg-transparent" data-id="{{ $demoId }}" title="Delete">
-                                                            <i class="fa fa-trash fs-14"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                                @endforeach
                                             </div>
+                                            <div id="removed-media"></div>
 
                                             {{-- Modern Drag & Drop Box --}}
                                             <div class="p-4 border border-2 border-dashed rounded bg-white text-center position-relative" style="border-color: #e9993e !important; cursor: pointer;" id="dropzone-box">
                                                 <div class="py-2">
                                                     <i class="fa fa-cloud-upload fa-2x mb-2" style="color: #e9993e;"></i>
-                                                    <p class="text-muted fs-13 mb-1">Drag and drop your file here to renew/replace (Max 1 file)</p>
+                                                    <p class="text-muted fs-13 mb-1">Drag and drop your files here (up to 5 files, 5 MB each). Press Save to keep the changes.</p>
                                                     <p class="text-muted fs-11 mb-2">or</p>
                                                     <div class="d-flex justify-content-center gap-2">
                                                         <button type="button" class="btn btn-sm fs-12 bg-white" id="btn-add" style="border-color: #e9993e; color: #e9993e;">
@@ -290,7 +296,7 @@
                                                 </div>
 
                                                 <input type="hidden" id="temp_uuid" name="temp_uuid">
-                                                <input type="file" id="attachments" style="display: none;" accept="image/*,.pdf,.doc,.docx">
+                                                <input type="file" id="attachments" style="display: none;" accept="image/*,.pdf,.doc,.docx" multiple>
                                                 <input type="file" id="camera" capture="environment" style="display: none;" accept="image/*">
                                             </div>
                                         </div>
@@ -367,12 +373,6 @@
 @push('scripts')
 @include('partials.phone-input')
 <script>
-window.mediaConfig = {
-    modelType: null,
-    modelId: null,
-    collection: 'attachments'
-};
-
 document.addEventListener('DOMContentLoaded', function () {
     const phone = initPhoneInput('#phone_number_display', '#phone_number', '#phone_number-error');
 
@@ -434,113 +434,123 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     dropzone.on('drop', function(e) {
-        let droppedFiles = e.originalEvent.dataTransfer.files;
-        if (droppedFiles.length > 0) {
-            processAndUploadFile(droppedFiles[0]);
-        }
+        uploadFiles(e.originalEvent.dataTransfer.files);
     });
 
     $('#attachments, #camera').on('change', function () {
-        if (this.files.length > 0) {
-            processAndUploadFile(this.files[0]);
-            this.value = '';
-        }
+        uploadFiles(this.files);
+        this.value = '';
     });
 
-    function processAndUploadFile(file) {
-        let formData = new FormData();
-        if (window.mediaConfig.modelType !== null) formData.append('model_type', window.mediaConfig.modelType);
-        if (window.mediaConfig.modelId !== null) formData.append('model_id', window.mediaConfig.modelId);
-        formData.append('collection', window.mediaConfig.collection);
+    const MAX_FILES = 5;
 
+    // One at a time, so every file joins the same temporary upload (temp_uuid)
+    function uploadFiles(files) {
+        let queue = Array.from(files || []);
+        const room = MAX_FILES - $('#attachment-list .attachment-row').length;
+        if (queue.length > room) {
+            alert(`You can keep up to ${MAX_FILES} files. Delete one first.` + (room > 0 ? ` Only the first ${room} will be added.` : ''));
+            queue = queue.slice(0, Math.max(room, 0));
+        }
+
+        const next = () => {
+            const file = queue.shift();
+            if (file) uploadFile(file, next);
+        };
+        next();
+    }
+
+    function uploadFile(file, done) {
+        let formData = new FormData();
         let uuid = $('#temp_uuid').val();
         if (uuid) formData.append('uuid', uuid);
-
         formData.append('attachments[]', file);
 
-        let existingRow = $('#attachment-list .attachment-row');
-        let oldMediaId = existingRow.attr('data-id');
+        $.ajax({
+            url: "{{ route('attachments.store') }}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+            success: function (res) {
+                $('#temp_uuid').val(res.uuid);
 
-        let uploadAction = function() {
-            $.ajax({
-                url: "{{ route('attachments.store') }}",
-                type: "POST",
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                success: function (res) {
-                    $('#temp_uuid').val(res.uuid);
-                    $('#attachment-list').empty();
+                let fileData = res.files[res.files.length - 1];
+                let fileUrl = fileData.url.startsWith('http') ? fileData.url : window.location.origin + fileData.url;
+                let fileName = $('<div>').text(file.name || 'Uploaded Document').html();
 
-                    let fileData = res.files[res.files.length - 1];
-                    let fileUrl = fileData.url.startsWith('http') ? fileData.url : window.location.origin + fileData.url;
-                    let fileName = file.name || 'Uploaded Document';
-
-                    $('#attachment-list').append(`
-                        <div class="d-flex align-items-center justify-content-between p-2 mb-2 border rounded bg-white shadow-sm attachment-row" data-id="${fileData.id}">
-                            <div class="d-flex align-items-center overflow-hidden">
-                                <i class="fa fa-file-text-o fa-lg me-3"></i>
-                                <div class="text-truncate">
-                                    <span class="d-block fs-13 fw-semibold text-dark text-truncate attachment-preview" style="cursor: pointer;" data-full="${fileUrl}">${fileName}</span>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center gap-3 ms-2">
-                                <i class="fa fa-check text-success fs-14"></i>
-                                <button type="button" class="btn btn-sm text-danger p-0 delete-attachment border-0 bg-transparent" data-id="${fileData.id}" title="Delete">
-                                    <i class="fa fa-trash fs-14"></i>
-                                </button>
+                $('#attachment-list').append(`
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-2 border rounded bg-white shadow-sm attachment-row" data-id="${fileData.id}">
+                        <div class="d-flex align-items-center overflow-hidden">
+                            <i class="fa fa-file-text-o fa-lg me-3"></i>
+                            <div class="text-truncate">
+                                <span class="d-block fs-13 fw-semibold text-dark text-truncate attachment-preview" style="cursor: pointer;" data-full="${fileUrl}">${fileName} <small class="text-muted fw-normal">(new, press Save)</small></span>
                             </div>
                         </div>
-                    `);
-                },
-                error: function() {
-                    alert('Failed to upload file. Please try again.');
-                }
-            });
-        };
-
-        if (oldMediaId && oldMediaId !== '9999') {
-            $.ajax({
-                url: `/attachments/${oldMediaId}`,
-                type: 'DELETE',
-                data: { _token: '{{ csrf_token() }}' },
-                complete: function() {
-                    uploadAction();
-                }
-            });
-        } else {
-            uploadAction();
-        }
+                        <div class="d-flex align-items-center gap-3 ms-2">
+                            <i class="fa fa-check text-success fs-14"></i>
+                            <button type="button" class="btn btn-sm text-danger p-0 delete-attachment border-0 bg-transparent" data-id="${fileData.id}" title="Delete">
+                                <i class="fa fa-trash fs-14"></i>
+                            </button>
+                        </div>
+                    </div>
+                `);
+            },
+            error: function(xhr) {
+                // Show why (wrong type, too big, too many uploads) instead of a generic message
+                const errors = xhr.responseJSON && xhr.responseJSON.errors;
+                const reason = errors ? Object.values(errors)[0][0].replace(/attachments\.\d+ field/, 'file') : (xhr.status === 413 ? 'The file is too large.' : 'Please try again.');
+                alert(`Could not upload ${file.name}: ${reason}`);
+            },
+            complete: done
+        });
     }
 
     $(document).on('click', '.delete-attachment', function (e) {
         e.preventDefault();
-        const button = $(this).closest('.delete-attachment');
-        const mediaId = button.attr('data-id');
+        const row = $(this).closest('.attachment-row');
+        const mediaId = row.attr('data-id');
 
-        if (mediaId === '9999') {
-            button.closest('.attachment-row').fadeOut(100, function () {
-                $(this).remove();
-            });
+        if (!confirm('Are you sure? This file will be deleted.')) {
             return;
         }
 
-        if (confirm('Are you sure? This file will be deleted.')) {
-            $.ajax({
-                url: `/attachments/${mediaId}`,
-                type: 'DELETE',
-                data: { _token: '{{ csrf_token() }}' },
-                success: function (response) {
-                    if (response.success) {
-                        button.closest('.attachment-row').fadeOut(100, function () {
-                            $(this).remove();
-                        });
-                    }
-                }
-            });
+        // Saved files are removed when the profile is saved; new uploads are deleted now
+        if (row.attr('data-saved')) {
+            $('#removed-media').append($('<input type="hidden" name="remove_media[]">').val(mediaId));
+            row.fadeOut(100, function () { $(this).remove(); });
+            return;
         }
+
+        $.ajax({
+            url: `/attachments/${mediaId}`,
+            type: 'DELETE',
+            data: { _token: '{{ csrf_token() }}' },
+            success: function (response) {
+                if (response.success) {
+                    row.fadeOut(100, function () { $(this).remove(); });
+                }
+            }
+        });
     });
+
+    // IC: digits only, dashes added as typed (201003-13-5111). Passport: letters and numbers, as typed.
+    function updateIdField() {
+        const isIc = $('#id_type').val() === 'ic';
+        $('#ic-label').text(isIc ? 'IC Number' : 'Passport Number');
+        $('#ic').attr('placeholder', isIc ? 'e.g. 201003-13-5111' : 'e.g. A12345678').attr('inputmode', isIc ? 'numeric' : 'text');
+    }
+    $('#id_type').on('change', function () {
+        $('#ic').val('').removeClass('is-invalid');
+        updateIdField();
+    });
+    $('#ic').on('input', function () {
+        if ($('#id_type').val() !== 'ic') return;
+        const digits = this.value.replace(/\D/g, '').slice(0, 12);
+        this.value = [digits.slice(0, 6), digits.slice(6, 8), digits.slice(8)].filter(Boolean).join('-');
+    });
+    updateIdField();
 
     $(document).on('click', '.attachment-preview', function () {
         const imageUrl = $(this).data('full');

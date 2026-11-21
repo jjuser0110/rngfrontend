@@ -48,6 +48,7 @@ Route::get('/tours/{slug}', [TourController::class, 'show'])->name('tours.show')
 Route::middleware(['auth'])->prefix('/myaccount')->as('myaccount.')->group(function () {
     Route::get('/', [WelcomeController::class, 'myaccount'])->name('index');
     Route::put('/profile', [WelcomeController::class, 'updateProfile'])->name('profile.update');
+    Route::get('/bookings/{reservation}/invoice', [WelcomeController::class, 'invoice'])->name('invoice');
 });
 
 Route::view('/terms', 'terms')->name('terms');

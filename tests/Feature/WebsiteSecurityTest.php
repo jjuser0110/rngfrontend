@@ -64,7 +64,7 @@ class WebsiteSecurityTest extends TestCase
             '_token' => csrf_token(), 'username' => $username, 'email' => "$username@example.com",
             'password' => self::PASSWORD, 'password_confirmation' => self::PASSWORD,
             'first_name' => 'Reg', 'last_name' => 'Test', 'phone_number' => '+60123456789',
-            'date_of_birth' => '1990-01-01', 'ic' => '900101-13-5555', 'expiration_date' => now()->addYears(3)->toDateString(),
+            'date_of_birth' => '1990-01-01', 'id_type' => 'ic', 'ic' => '900101-13-5555', 'expiration_date' => now()->addYears(3)->toDateString(),
         ];
     }
 

@@ -25,14 +25,18 @@
     @endforeach
 
     @foreach ($quote['charges'] as $charge)
+        @php $staffPriced = $charge['name'] === \App\Models\ChargeType::DRIVER; @endphp
         <div class="d-flex justify-content-between mb-2 fs-13 gap-2" style="color: #495057;">
             <span class="text-break">
                 {{ $charge['quantity'] > 1 ? $charge['quantity'] . '× ' : '' }}{{ $charge['name'] }}
-                @if ($charge['multiplier'] > 1)
+                @if ($charge['multiplier'] > 1 && !$staffPriced)
                     <span class="fs-11" style="color: #6c757d;">({{ $charge['multiplier'] }} days)</span>
                 @endif
             </span>
-            <span class="text-nowrap" style="color: #33383c;">RM {{ number_format($charge['total_charge'], 2) }}</span>
+            {{-- Driver: no price on the website (staff set it) --}}
+            @unless ($staffPriced)
+                <span class="text-nowrap" style="color: #33383c;">RM {{ number_format($charge['total_charge'], 2) }}</span>
+            @endunless
         </div>
     @endforeach
 </div>
@@ -46,6 +50,10 @@
 </div>
 
 <p class="fs-11 mb-0" style="color: #6c757d;">
-    Plus a refundable security deposit of RM {{ number_format($quote['security_deposit'], 2) }}.
+    @if ($quote['security_deposit'] > 0)
+        Plus a refundable security deposit of RM {{ number_format($quote['security_deposit'], 2) }}.
+    @else
+        No security deposit needed for your account.
+    @endif
     Our team confirms the final price in your quotation.
 </p>

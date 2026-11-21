@@ -12,15 +12,24 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  */
 class AttachmentController extends Controller
 {
+    /** Licence and IC / passport files per form (Register, My Account). */
+    private const MAX_FILES = 5;
+
     public function store(Request $request)
     {
         $request->validate([
-            'attachments'   => 'required|array|max:5',
+            'attachments'   => 'required|array|max:' . self::MAX_FILES,
             'attachments.*' => 'file|mimes:jpg,jpeg,png,pdf,doc,docx|max:5120',
         ]);
 
         // Keep adding to the visitor's own upload; a uuid that isn't theirs starts a new one
         $temp = TemporaryUpload::ofSession($request->uuid) ?? TemporaryUpload::startForSession();
+        if ($temp->getMedia('attachments')->count() + count($request->file('attachments')) > self::MAX_FILES) {
+            return response()->json([
+                'message' => 'You can upload up to ' . self::MAX_FILES . ' files.',
+                'errors'  => ['attachments' => ['You can upload up to ' . self::MAX_FILES . ' files.']],
+            ], 422);
+        }
         $files = [];
 
         foreach ($request->file('attachments') as $file) {

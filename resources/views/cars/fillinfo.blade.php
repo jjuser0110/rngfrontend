@@ -160,7 +160,10 @@
                                 @foreach ($reservation->chargeDetails as $charge)
                                     <div>
                                         <span>{{ $charge->quantity > 1 ? $charge->quantity . '× ' : '' }}{{ $charge->name }}</span>
-                                        <span>RM {{ number_format($charge->total_charge, 2) }}</span>
+                                        {{-- Driver requested on the website: no price until staff set it --}}
+                                        @unless ($charge->name === \App\Models\ChargeType::DRIVER && (float) $charge->total_charge == 0)
+                                            <span>RM {{ number_format($charge->total_charge, 2) }}</span>
+                                        @endunless
                                     </div>
                                 @endforeach
                             </div>
@@ -168,7 +171,7 @@
                                 <span class="fs-13 text-soft">{{ $isPending ? 'Estimated total' : 'Total' }}</span>
                                 <span class="fw-bold fs-20 text-ink">RM {{ number_format($reservation->total_price, 2) }}</span>
                             </div>
-                            <p class="fs-12 text-soft mt-2 mb-0">Plus a refundable security deposit of RM {{ number_format($reservation->security_deposit, 2) }}.{{ $isPending ? ' Our team confirms the final price in your quotation.' : '' }}</p>
+                            <p class="fs-12 text-soft mt-2 mb-0">{{ $reservation->security_deposit > 0 ? 'Plus a refundable security deposit of RM ' . number_format($reservation->security_deposit, 2) . '.' : 'No security deposit needed.' }}{{ $isPending ? ' Our team confirms the final price in your quotation.' : '' }}</p>
                         </div>
 
                         {{-- Help --}}
@@ -190,6 +193,15 @@
                     <div class="row g-4">
 
                         <div class="col-xl-8 col-12">
+
+                            @if ($licenceExpired)
+                                {{-- Expired licence: the customer keeps the account but can't book until it is renewed --}}
+                                <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4" role="alert">
+                                    <div class="fw-bold mb-1"><i class="fa fa-exclamation-triangle me-2"></i>Your driving licence has expired</div>
+                                    <div class="fs-13">It expired on {{ \Carbon\Carbon::parse($customer->expiration_date)->format('j M Y') }}. Please update your licence in My Account before sending a booking request.</div>
+                                    <a href="{{ route('myaccount.index') }}" class="btn btn-sm btn-danger mt-2 fs-12">Update my licence</a>
+                                </div>
+                            @endif
 
                             <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white mb-4">
                                 <div class="mb-3 pb-3 border-bottom border-light d-flex justify-content-between align-items-center gap-2">
@@ -250,9 +262,11 @@
 
                                 @include('cars.partials.summary')
 
-                                <button type="submit" class="js-send-request btn btn-dark w-100 text-center border-0 py-3 mt-4 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-white d-none d-xl-flex align-items-center justify-content-center gap-2">
-                                    <span>Send Booking Request</span> <i class="fa fa-paper-plane"></i>
-                                </button>
+                                @unless ($licenceExpired)
+                                    <button type="submit" class="js-send-request btn btn-dark w-100 text-center border-0 py-3 mt-4 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-white d-none d-xl-flex align-items-center justify-content-center gap-2">
+                                        <span>Send Booking Request</span> <i class="fa fa-paper-plane"></i>
+                                    </button>
+                                @endunless
                             </div>
                         </div>
 
@@ -271,9 +285,13 @@
         <span class="text-uppercase fs-10 fw-bold tracking-wider d-block text-truncate" style="color: #6c757d;">Estimated Total</span>
         <div class="fw-bold fs-18 text-truncate" style="color: #33383c;">RM {{ number_format($quote['total'], 2) }}</div>
     </div>
-    <button type="submit" form="detailsForm" class="js-send-request btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
-        <span>Send Request</span> <i class="fa fa-paper-plane"></i>
-    </button>
+    @if ($licenceExpired)
+        <a href="{{ route('myaccount.index') }}" class="btn btn-danger px-3 py-2 text-uppercase fw-semibold fs-12 rounded-2 shadow-sm flex-shrink-0 text-nowrap">Update licence</a>
+    @else
+        <button type="submit" form="detailsForm" class="js-send-request btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
+            <span>Send Request</span> <i class="fa fa-paper-plane"></i>
+        </button>
+    @endif
 </div>
 @endif
 

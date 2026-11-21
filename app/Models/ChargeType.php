@@ -14,6 +14,7 @@ class ChargeType extends Model
     // Charge types the reservation code treats specially, matched by name as step 3 always has
     const CDR = 'Collision Damage Reduction (CDR)';
     const OUTSTATION = 'Outstation';
+    const DRIVER = 'Driver Services';
 
     protected $fillable = [
         'name',
@@ -26,4 +27,10 @@ class ChargeType extends Model
     protected $casts = [
         'show_on_frontend' => 'boolean',
     ];
+
+    /** The website only asks yes/no and shows no price; staff set days and price in rngcarrental step 3. */
+    public function isPricedByStaff(): bool
+    {
+        return $this->name === self::DRIVER;
+    }
 }

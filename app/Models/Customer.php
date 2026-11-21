@@ -29,16 +29,30 @@ class Customer extends Authenticatable implements HasMedia
         'country',
         'date_of_birth',
         'ic',
+        'id_type',
         'expiration_date',
         'created_by',
     ];
 
     protected $hidden = ['password', 'remember_token'];
 
-    // is_agent is set by staff in rngcarrental only, so it is cast here but deliberately not fillable
+    // is_agent and deposit_required are set by staff in rngcarrental only, so they are cast here but deliberately not fillable
     protected $casts = [
         'is_agent' => 'boolean',
+        'deposit_required' => 'boolean',
     ];
+
+    /** Licence expired before today (valid through its expiry date). Customers can sign up, but not book. */
+    public function licenceExpired(): bool
+    {
+        return $this->expiration_date && \Carbon\Carbon::parse($this->expiration_date)->lt(today());
+    }
+
+    /** Security deposit for this customer's bookings: none when staff switched it off for them. */
+    public function securityDeposit(): float
+    {
+        return $this->deposit_required === false ? 0.0 : (float) config('reservation.security_deposit');
+    }
 
     public function registerMediaCollections(): void
     {
