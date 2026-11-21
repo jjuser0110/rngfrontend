@@ -55,6 +55,23 @@ class User extends Authenticatable
         return $this->belongsTo('App\Models\Role');
     }
 
+    /**
+     * Why this login can't use the booking website, or null when it can.
+     * Checked at login and on every logged-in page (Authenticate), so a change in rngcarrental takes effect at once.
+     */
+    public function websiteLoginProblem(): ?string
+    {
+        if (!$this->customer_id) {
+            return "This account can't be used on the booking website.";
+        }
+        // Inactive login, or the customer was deleted in rngcarrental (soft-deleted rows aren't found)
+        if ($this->is_active != 1 || !Customer::whereKey($this->customer_id)->exists()) {
+            return 'Your account is inactive. Please contact us.';
+        }
+
+        return null;
+    }
+
     public function companies()
     {
         return $this->belongsToMany(Company::class, 'company_users')

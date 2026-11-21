@@ -32,13 +32,11 @@ class LoginController extends Controller
             return back()->withErrors(['username' => 'Invalid username or password.'])->withInput();
         }
 
-        // Only active customer accounts sign in here (staff use rngcarrental, which blocks customers the same way)
+        // Only active customer accounts sign in here (staff use rngcarrental, which blocks customers the same way).
+        // A customer deleted in rngcarrental counts as inactive.
         $user = Auth::getLastAttempted();
-        if (!$user->customer_id) {
-            return back()->withErrors(['username' => "This account can't be used on the booking website."])->withInput();
-        }
-        if ($user->is_active != 1) {
-            return back()->withErrors(['username' => 'Your account is inactive. Please contact us.'])->withInput();
+        if ($problem = $user->websiteLoginProblem()) {
+            return back()->withErrors(['username' => $problem])->withInput();
         }
 
         Auth::login($user, $request->boolean('remember'));

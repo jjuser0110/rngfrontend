@@ -168,6 +168,39 @@ class WebsiteSecurityTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_deleted_customer_cannot_log_in(): void
+    {
+        $user = $this->customerUser();
+        Customer::find($user->customer_id)->delete(); // as staff do in rngcarrental (soft delete)
+
+        $this->post('/login', ['username' => $user->username, 'password' => self::PASSWORD, '_token' => csrf_token()])
+            ->assertSessionHasErrors(['username' => 'Your account is inactive. Please contact us.']);
+        $this->assertGuest();
+    }
+
+    public function test_customer_deleted_while_logged_in_is_signed_out(): void
+    {
+        $user = $this->customerUser();
+        $this->actingAs($user)->get(route('myaccount.index'))->assertOk();
+
+        Customer::find($user->customer_id)->delete();
+
+        $this->get(route('myaccount.index'))->assertRedirect(route('login'))
+            ->assertSessionHasErrors(['username' => 'Your account is inactive. Please contact us.']);
+        $this->assertGuest();
+    }
+
+    public function test_customer_made_inactive_while_logged_in_is_signed_out(): void
+    {
+        $user = $this->customerUser();
+        $this->actingAs($user)->get(route('myaccount.index'))->assertOk();
+
+        $user->forceFill(['is_active' => 0])->save();
+
+        $this->postJson(route('cars.quote'), [])->assertUnauthorized();
+        $this->assertGuest();
+    }
+
     public function test_wrong_password_does_not_reveal_the_account_type(): void
     {
         $user = $this->customerUser(['is_active' => 0]);
