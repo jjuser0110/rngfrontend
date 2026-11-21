@@ -76,14 +76,16 @@
                                 <h3 class="fw-bold fs-17 mb-1"><a href="{{ $detailUrl }}" class="text-ink">{{ $tour->name }}</a></h3>
                                 <ul class="fact-line list-unstyled fs-12 mb-2">
                                     <li><i class="fa fa-clock-o me-1" aria-hidden="true"></i>{{ $tour->duration_label }}</li>
-                                    <li>Starts {{ $tour->start_time }}</li>
+                                    @if ($tour->start_time)
+                                        <li>Starts {{ $tour->start_time }}</li>
+                                    @endif
                                 </ul>
                                 <p class="fs-13 text-soft mb-3 clamp-2">{{ $tour->summary }}</p>
                                 <div class="rate-box d-flex justify-content-between align-items-center gap-2 mb-3 mt-auto">
                                     <span class="fs-12 text-soft"><i class="fa fa-users me-1" aria-hidden="true"></i>Min {{ $tour->min_pax }} {{ \Illuminate\Support\Str::plural('person', $tour->min_pax) }}</span>
                                     <span class="text-end">
                                         <span class="d-block fs-11 text-soft">Starting from</span>
-                                        <span class="fw-bold fs-17 text-ink">RM {{ number_format($tour->price_per_person) }}</span> <span class="fs-12 text-soft">/ person</span>
+                                        <span class="fw-bold fs-17 text-ink">RM {{ \App\Support\Price::format($tour->price_per_person) }}</span> <span class="fs-12 text-soft">/ person</span>
                                     </span>
                                 </div>
                                 <div class="pt-3 border-top border-light">
@@ -100,9 +102,16 @@
                     <div class="col-12">
                         <div class="card p-5 border border-light shadow-sm rounded-3 text-center bg-white">
                             <i class="fa fa-map-o fa-2x mb-3 accent"></i>
-                            <h3 class="fw-bold fs-18 mb-1 text-ink">No tours match your search</h3>
-                            <p class="fs-13 text-soft mb-3">Try another category or duration.</p>
-                            <div><a href="{{ route('tours.index') }}" class="btn btn-dark btn-sm text-white">Show all tours</a></div>
+                            @if (collect($filters)->except('sort')->filter()->isNotEmpty())
+                                <h3 class="fw-bold fs-18 mb-1 text-ink">No tours match your search</h3>
+                                <p class="fs-13 text-soft mb-3">Try another category or duration.</p>
+                                <div><a href="{{ route('tours.index') }}" class="btn btn-dark btn-sm text-white">Show all tours</a></div>
+                            @else
+                                {{-- Nothing listed in rngcarrental yet --}}
+                                <h3 class="fw-bold fs-18 mb-1 text-ink">No tours listed yet</h3>
+                                <p class="fs-13 text-soft mb-3">Planning a day out around Kuching? Ask us on WhatsApp.</p>
+                                <div><a href="{{ \App\Support\WhatsApp::link("Hi, I'd like to ask about tours around Kuching.") }}" target="_blank" rel="noopener" class="btn btn-success btn-sm text-white"><i class="fa fa-whatsapp me-1"></i> WhatsApp us</a></div>
+                            @endif
                         </div>
                     </div>
                 @endforelse

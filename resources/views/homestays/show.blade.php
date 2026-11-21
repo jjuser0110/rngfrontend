@@ -16,7 +16,7 @@
         'Swimming pool' => 'fa-life-ring', 'Gym' => 'fa-heartbeat', 'Meals on request' => 'fa-cutlery',
     ];
     $images = $homestay->images;
-    $mapUrl = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($homestay->map_query ?: $homestay->address);
+    $mapUrl = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($homestay->map_query ?: ($homestay->address ?: $homestay->area . ', Kuching, Sarawak'));
 @endphp
 
 <div class="no-bottom no-top listing-page" id="content">
@@ -54,16 +54,17 @@
                             @endif
                         </div>
                         <h1 class="fw-bold fs-24 text-ink mb-1">{{ $homestay->name }}</h1>
-                        <p class="fs-13 text-soft mb-4">{{ $homestay->address }}</p>
+                        <p class="fs-13 text-soft mb-4">{{ $homestay->address ?: $homestay->area . ', Kuching' }}</p>
 
                         <div class="row g-2">
-                            @foreach ([
+                            {{-- Bathrooms, beds and size are optional in rngcarrental: tiles left out when blank --}}
+                            @foreach (array_filter([
                                 ['fa-bed', $homestay->bedrooms, \Illuminate\Support\Str::plural('Bedroom', $homestay->bedrooms)],
-                                ['fa-bath', $homestay->bathrooms, \Illuminate\Support\Str::plural('Bathroom', $homestay->bathrooms)],
-                                ['fa-bed', $homestay->beds, \Illuminate\Support\Str::plural('Bed', $homestay->beds)],
+                                $homestay->bathrooms !== null ? ['fa-bath', $homestay->bathrooms, \Illuminate\Support\Str::plural('Bathroom', $homestay->bathrooms)] : null,
+                                $homestay->beds ? ['fa-bed', $homestay->beds, \Illuminate\Support\Str::plural('Bed', $homestay->beds)] : null,
                                 ['fa-users', $homestay->guests, 'Guests max'],
-                                ['fa-arrows-alt', number_format($homestay->size_sqft), 'sq ft'],
-                            ] as [$icon, $value, $label])
+                                $homestay->size_sqft ? ['fa-arrows-alt', number_format($homestay->size_sqft), 'sq ft'] : null,
+                            ]) as [$icon, $value, $label])
                                 <div class="col-lg col-4">
                                     <div class="fact-tile text-center">
                                         <i class="fa {{ $icon }} accent mb-1"></i>
@@ -75,29 +76,38 @@
                         </div>
                     </div>
 
-                    <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
-                        <h2 class="fw-bold fs-17 text-ink mb-3">About this homestay</h2>
-                        @foreach ($homestay->description as $paragraph)
-                            <p class="fs-14 mb-3" style="color: #495057;">{{ $paragraph }}</p>
-                        @endforeach
-                    </div>
-
-                    <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
-                        <h2 class="fw-bold fs-17 text-ink mb-3">Amenities</h2>
-                        <div class="row g-3">
-                            @foreach ($homestay->amenities as $amenity)
-                                <div class="col-sm-4 col-6 fs-13" style="color: #495057;">
-                                    <i class="fa {{ $amenityIcons[$amenity] ?? 'fa-check' }} accent me-2" style="width: 16px;"></i>{{ $amenity }}
-                                </div>
+                    {{-- Sections with nothing filled in (in rngcarrental) are left out --}}
+                    @if (count($homestay->description))
+                        <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
+                            <h2 class="fw-bold fs-17 text-ink mb-3">About this homestay</h2>
+                            @foreach ($homestay->description as $paragraph)
+                                <p class="fs-14 mb-3" style="color: #495057;">{!! nl2br(e($paragraph)) !!}</p>
                             @endforeach
                         </div>
-                    </div>
+                    @endif
+
+                    @if (count($homestay->amenities))
+                        <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
+                            <h2 class="fw-bold fs-17 text-ink mb-3">Amenities</h2>
+                            <div class="row g-3">
+                                @foreach ($homestay->amenities as $amenity)
+                                    <div class="col-sm-4 col-6 fs-13" style="color: #495057;">
+                                        <i class="fa {{ $amenityIcons[$amenity] ?? 'fa-check' }} accent me-2" style="width: 16px;"></i>{{ $amenity }}
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
                         <h2 class="fw-bold fs-17 text-ink mb-3">House rules</h2>
-                        <div class="row g-2 mb-3">
-                            <div class="col-sm-4 col-6"><div class="fact-tile"><div class="fs-11 text-soft">Check-in</div><div class="fw-bold fs-14 text-ink">From {{ $homestay->check_in }}</div></div></div>
-                            <div class="col-sm-4 col-6"><div class="fact-tile"><div class="fs-11 text-soft">Check-out</div><div class="fw-bold fs-14 text-ink">By {{ $homestay->check_out }}</div></div></div>
+                        <div class="row g-2 {{ count($homestay->house_rules) ? 'mb-3' : '' }}">
+                            @if ($homestay->check_in)
+                                <div class="col-sm-4 col-6"><div class="fact-tile"><div class="fs-11 text-soft">Check-in</div><div class="fw-bold fs-14 text-ink">From {{ $homestay->check_in }}</div></div></div>
+                            @endif
+                            @if ($homestay->check_out)
+                                <div class="col-sm-4 col-6"><div class="fact-tile"><div class="fs-11 text-soft">Check-out</div><div class="fw-bold fs-14 text-ink">By {{ $homestay->check_out }}</div></div></div>
+                            @endif
                             <div class="col-sm-4 col-12"><div class="fact-tile"><div class="fs-11 text-soft">Minimum stay</div><div class="fw-bold fs-14 text-ink">{{ $homestay->min_nights }} {{ \Illuminate\Support\Str::plural('night', $homestay->min_nights) }}</div></div></div>
                         </div>
                         <ul class="list-unstyled fs-13 mb-0" style="color: #495057;">
@@ -109,7 +119,7 @@
 
                     <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
                         <h2 class="fw-bold fs-17 text-ink mb-2">Location</h2>
-                        <p class="fs-13 text-soft mb-3"><i class="fa fa-map-marker accent me-1"></i>{{ $homestay->address }}</p>
+                        <p class="fs-13 text-soft mb-3"><i class="fa fa-map-marker accent me-1"></i>{{ $homestay->address ?: $homestay->area . ', Kuching' }}</p>
                         <div class="d-flex flex-wrap gap-2">
                             <a href="{{ $mapUrl }}" target="_blank" rel="noopener" class="btn btn-outline-dark btn-sm fs-12 fw-semibold"><i class="fa fa-map me-1"></i> Open in Google Maps</a>
                             <a href="{{ route('welcome') }}#vehicle-search" class="btn btn-outline-dark btn-sm fs-12 fw-semibold"><i class="fa fa-car me-1"></i> Rent a car for this trip</a>
@@ -119,7 +129,7 @@
 
                 <aside class="col-lg-4">
                     @include('partials.whatsapp-enquiry', [
-                        'price'        => 'RM ' . number_format($homestay->price_per_night),
+                        'price'        => 'RM ' . \App\Support\Price::format($homestay->price_per_night),
                         'priceUnit'    => '/ night',
                         'priceNote'    => 'Minimum ' . $homestay->min_nights . ' ' . \Illuminate\Support\Str::plural('night', $homestay->min_nights) . ' · up to ' . $homestay->guests . ' guests',
                         'whatsappLink' => $whatsappLink,
@@ -137,7 +147,7 @@
                             <a href="{{ route('homestays.show', $other->slug) }}" class="card border border-light shadow-sm rounded-3 bg-white overflow-hidden h-100 listing-card">
                                 <img src="{{ $other->images[0] ?? '' }}" alt="{{ $other->name }}" style="height: 170px; object-fit: cover;" loading="lazy">
                                 <div class="p-3">
-                                    <div class="fw-bold fs-16 text-ink">RM {{ number_format($other->price_per_night) }} <span class="fs-12 fw-normal text-soft">/ night</span></div>
+                                    <div class="fw-bold fs-16 text-ink">RM {{ \App\Support\Price::format($other->price_per_night) }} <span class="fs-12 fw-normal text-soft">/ night</span></div>
                                     <div class="fw-bold fs-14 text-ink">{{ $other->name }}</div>
                                     <div class="fs-12 text-soft">{{ $other->area }} · {{ $other->bedrooms }} bed · {{ $other->guests }} guests</div>
                                 </div>

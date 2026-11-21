@@ -4,8 +4,8 @@ namespace App\Providers;
 
 use App\Catalog\Contracts\HomestayCatalog;
 use App\Catalog\Contracts\TourCatalog;
-use App\Catalog\Sample\SampleHomestayCatalog;
-use App\Catalog\Sample\SampleTourCatalog;
+use App\Catalog\Database\DatabaseHomestayCatalog;
+use App\Catalog\Database\DatabaseTourCatalog;
 use App\Support\SiteInfo;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -17,10 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Homestays and tours are sample data for now. To manage them in rngcarrental,
-        // bind Eloquent versions of these contracts here instead.
-        $this->app->singleton(HomestayCatalog::class, SampleHomestayCatalog::class);
-        $this->app->singleton(TourCatalog::class, SampleTourCatalog::class);
+        // Homestays and tours staff manage in rngcarrental (Homestays / Tours menu).
+        // The old sample listings (App\Catalog\Sample, resources/data) are no longer used.
+        $this->app->singleton(HomestayCatalog::class, DatabaseHomestayCatalog::class);
+        $this->app->singleton(TourCatalog::class, DatabaseTourCatalog::class);
     }
 
     /**

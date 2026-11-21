@@ -123,12 +123,17 @@
                     @forelse ($homestays as $homestay)
                         @php
                             $detailUrl = route('homestays.show', $homestay->slug);
-                            $facts = [
-                                number_format($homestay->size_sqft) . ' sq ft',
+                            // Size, beds, bathrooms and check-in are optional in rngcarrental: left out when blank
+                            $facts = array_filter([
+                                $homestay->size_sqft ? number_format($homestay->size_sqft) . ' sq ft' : null,
                                 $homestay->type,
                                 'Up to ' . $homestay->guests . ' guests',
                                 'Min ' . $homestay->min_nights . ' ' . \Illuminate\Support\Str::plural('night', $homestay->min_nights),
-                            ];
+                            ]);
+                            $bedLine = array_filter([
+                                $homestay->beds ? $homestay->beds . ' ' . \Illuminate\Support\Str::plural('bed', $homestay->beds) : null,
+                                $homestay->check_in ? 'check-in ' . $homestay->check_in : null,
+                            ]);
                         @endphp
                         <article class="card border border-light shadow-sm rounded-3 bg-white overflow-hidden mb-4 listing-card homestay-card">
                             @include('partials.photo-slider', ['images' => $homestay->images, 'link' => $detailUrl, 'alt' => $homestay->name, 'badge' => $homestay->type])
@@ -153,13 +158,15 @@
                                     <div class="d-flex justify-content-between align-items-center gap-3">
                                         <span class="fs-14 text-soft">
                                             <i class="fa fa-bed me-1" aria-hidden="true"></i>{{ $homestay->bedrooms }}
-                                            <i class="fa fa-bath ms-3 me-1" aria-hidden="true"></i>{{ $homestay->bathrooms }}
+                                            @if ($homestay->bathrooms !== null)
+                                                <i class="fa fa-bath ms-3 me-1" aria-hidden="true"></i>{{ $homestay->bathrooms }}
+                                            @endif
                                         </span>
                                         <span class="fs-13 text-soft">Starting from</span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center gap-3 mt-1">
-                                        <span class="fs-13 text-soft">{{ $homestay->beds }} {{ \Illuminate\Support\Str::plural('bed', $homestay->beds) }} · check-in {{ $homestay->check_in }}</span>
-                                        <span class="fw-bold fs-17 text-ink">RM {{ number_format($homestay->price_per_night) }} <span class="fs-12 fw-normal text-soft">/ night</span></span>
+                                        <span class="fs-13 text-soft">{{ implode(' · ', $bedLine) }}</span>
+                                        <span class="fw-bold fs-17 text-ink">RM {{ \App\Support\Price::format($homestay->price_per_night) }} <span class="fs-12 fw-normal text-soft">/ night</span></span>
                                     </div>
                                 </div>
 
@@ -175,9 +182,16 @@
                     @empty
                         <div class="card p-5 border border-light shadow-sm rounded-3 text-center bg-white">
                             <i class="fa fa-home fa-2x mb-3 accent"></i>
-                            <h3 class="fw-bold fs-18 mb-1 text-ink">No homestays match your search</h3>
-                            <p class="fs-13 text-soft mb-3">Try another area or fewer filters.</p>
-                            <div><a href="{{ route('homestays.index') }}" class="btn btn-dark btn-sm text-white">Show all homestays</a></div>
+                            @if (collect($filters)->except('sort')->filter()->isNotEmpty())
+                                <h3 class="fw-bold fs-18 mb-1 text-ink">No homestays match your search</h3>
+                                <p class="fs-13 text-soft mb-3">Try another area or fewer filters.</p>
+                                <div><a href="{{ route('homestays.index') }}" class="btn btn-dark btn-sm text-white">Show all homestays</a></div>
+                            @else
+                                {{-- Nothing listed in rngcarrental yet --}}
+                                <h3 class="fw-bold fs-18 mb-1 text-ink">No homestays listed yet</h3>
+                                <p class="fs-13 text-soft mb-3">Looking for a place to stay in Kuching? Ask us on WhatsApp.</p>
+                                <div><a href="{{ \App\Support\WhatsApp::link("Hi, I'm looking for a homestay in Kuching.") }}" target="_blank" rel="noopener" class="btn btn-success btn-sm text-white"><i class="fa fa-whatsapp me-1"></i> WhatsApp us</a></div>
+                            @endif
                         </div>
                     @endforelse
 

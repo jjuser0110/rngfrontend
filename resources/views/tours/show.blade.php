@@ -43,12 +43,13 @@
                         <p class="fs-14 text-soft mb-4">{{ $tour->summary }}</p>
 
                         <div class="row g-2">
-                            @foreach ([
+                            {{-- Start time and pick-up point are optional in rngcarrental: tiles left out when blank --}}
+                            @foreach (array_filter([
                                 ['fa-clock-o', 'Duration', $tour->duration_label],
-                                ['fa-play-circle-o', 'Starts', $tour->start_time],
+                                $tour->start_time ? ['fa-play-circle-o', 'Starts', $tour->start_time] : null,
                                 ['fa-users', 'Minimum', $tour->min_pax . ' ' . \Illuminate\Support\Str::plural('person', $tour->min_pax)],
-                                ['fa-map-marker', 'Pick-up', $tour->pickup_point],
-                            ] as [$icon, $label, $value])
+                                $tour->pickup_point ? ['fa-map-marker', 'Pick-up', $tour->pickup_point] : null,
+                            ]) as [$icon, $label, $value])
                                 <div class="col-md-3 col-6">
                                     <div class="fact-tile">
                                         <div class="fs-11 text-soft"><i class="fa {{ $icon }} accent me-1"></i>{{ $label }}</div>
@@ -59,58 +60,79 @@
                         </div>
                     </div>
 
-                    <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
-                        <h2 class="fw-bold fs-17 text-ink mb-3">Overview</h2>
-                        @foreach ($tour->description as $paragraph)
-                            <p class="fs-14 mb-3" style="color: #495057;">{{ $paragraph }}</p>
-                        @endforeach
-                        <h3 class="fw-bold fs-15 text-ink mb-2 mt-2">Highlights</h3>
-                        <ul class="list-unstyled fs-13 mb-0" style="color: #495057;">
-                            @foreach ($tour->highlights as $highlight)
-                                <li class="mb-1"><i class="fa fa-star accent me-2"></i>{{ $highlight }}</li>
+                    {{-- Sections with nothing filled in (in rngcarrental) are left out --}}
+                    @if (count($tour->description) || count($tour->highlights))
+                        <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
+                            <h2 class="fw-bold fs-17 text-ink mb-3">Overview</h2>
+                            @foreach ($tour->description as $paragraph)
+                                <p class="fs-14 mb-3" style="color: #495057;">{!! nl2br(e($paragraph)) !!}</p>
                             @endforeach
-                        </ul>
-                    </div>
-
-                    <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
-                        <h2 class="fw-bold fs-17 text-ink mb-3">Itinerary</h2>
-                        <ul class="list-unstyled timeline-list mb-0">
-                            @foreach ($tour->itinerary as [$time, $title, $detail])
-                                <li class="mb-3">
-                                    <span class="d-block fs-11 fw-bold text-uppercase text-soft">{{ $time }}</span>
-                                    <span class="d-block fw-bold fs-14 text-ink">{{ $title }}</span>
-                                    <span class="d-block fs-13" style="color: #495057;">{{ $detail }}</span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-
-                    <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <h2 class="fw-bold fs-15 text-ink mb-2">What's included</h2>
+                            @if (count($tour->highlights))
+                                <h3 class="fw-bold fs-15 text-ink mb-2 mt-2">Highlights</h3>
                                 <ul class="list-unstyled fs-13 mb-0" style="color: #495057;">
-                                    @foreach ($tour->includes as $item)
-                                        <li class="mb-1"><i class="fa fa-check me-2" style="color: #198754;"></i>{{ $item }}</li>
+                                    @foreach ($tour->highlights as $highlight)
+                                        <li class="mb-1"><i class="fa fa-star accent me-2"></i>{{ $highlight }}</li>
                                     @endforeach
                                 </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <h2 class="fw-bold fs-15 text-ink mb-2">Not included</h2>
-                                <ul class="list-unstyled fs-13 mb-0" style="color: #495057;">
-                                    @foreach ($tour->excludes as $item)
-                                        <li class="mb-1"><i class="fa fa-times me-2" style="color: #dc3545;"></i>{{ $item }}</li>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if (count($tour->itinerary))
+                        <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
+                            <h2 class="fw-bold fs-17 text-ink mb-3">Itinerary</h2>
+                            <ul class="list-unstyled timeline-list mb-0">
+                                @foreach ($tour->itinerary as [$time, $title, $detail])
+                                    <li class="mb-3">
+                                        @if ($time !== '')
+                                            <span class="d-block fs-11 fw-bold text-uppercase text-soft">{{ $time }}</span>
+                                        @endif
+                                        <span class="d-block fw-bold fs-14 text-ink">{{ $title }}</span>
+                                        @if ($detail !== '')
+                                            <span class="d-block fs-13" style="color: #495057;">{{ $detail }}</span>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if (count($tour->includes) || count($tour->excludes) || count($tour->what_to_bring))
+                        <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
+                            @if (count($tour->includes) || count($tour->excludes))
+                                <div class="row g-4">
+                                    @if (count($tour->includes))
+                                        <div class="col-md-6">
+                                            <h2 class="fw-bold fs-15 text-ink mb-2">What's included</h2>
+                                            <ul class="list-unstyled fs-13 mb-0" style="color: #495057;">
+                                                @foreach ($tour->includes as $item)
+                                                    <li class="mb-1"><i class="fa fa-check me-2" style="color: #198754;"></i>{{ $item }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                    @if (count($tour->excludes))
+                                        <div class="col-md-6">
+                                            <h2 class="fw-bold fs-15 text-ink mb-2">Not included</h2>
+                                            <ul class="list-unstyled fs-13 mb-0" style="color: #495057;">
+                                                @foreach ($tour->excludes as $item)
+                                                    <li class="mb-1"><i class="fa fa-times me-2" style="color: #dc3545;"></i>{{ $item }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+                            @if (count($tour->what_to_bring))
+                                <h2 class="fw-bold fs-15 text-ink mb-2 {{ count($tour->includes) || count($tour->excludes) ? 'mt-4' : '' }}">What to bring</h2>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach ($tour->what_to_bring as $item)
+                                        <span class="chip">{{ $item }}</span>
                                     @endforeach
-                                </ul>
-                            </div>
+                                </div>
+                            @endif
                         </div>
-                        <h2 class="fw-bold fs-15 text-ink mb-2 mt-4">What to bring</h2>
-                        <div class="d-flex flex-wrap gap-1">
-                            @foreach ($tour->what_to_bring as $item)
-                                <span class="chip">{{ $item }}</span>
-                            @endforeach
-                        </div>
-                    </div>
+                    @endif
 
                     @if (!empty($tour->good_to_know))
                         <div class="card border border-light shadow-sm rounded-3 bg-white p-4 mb-4">
@@ -126,7 +148,7 @@
 
                 <aside class="col-lg-4">
                     @include('partials.whatsapp-enquiry', [
-                        'price'        => 'RM ' . number_format($tour->price_per_person),
+                        'price'        => 'RM ' . \App\Support\Price::format($tour->price_per_person),
                         'priceUnit'    => '/ person',
                         'priceNote'    => 'Minimum ' . $tour->min_pax . ' ' . \Illuminate\Support\Str::plural('person', $tour->min_pax) . ' · final price depends on group size',
                         'whatsappLink' => $whatsappLink,
@@ -145,7 +167,7 @@
                                 <img src="{{ $other->images[0] ?? '' }}" alt="{{ $other->name }}" style="height: 170px; object-fit: cover;" loading="lazy">
                                 <div class="p-3">
                                     <div class="fw-bold fs-14 text-ink">{{ $other->name }}</div>
-                                    <div class="fs-12 text-soft">{{ $other->duration_label }} · from RM {{ number_format($other->price_per_person) }} / person</div>
+                                    <div class="fs-12 text-soft">{{ $other->duration_label }} · from RM {{ \App\Support\Price::format($other->price_per_person) }} / person</div>
                                 </div>
                             </a>
                         </div>
