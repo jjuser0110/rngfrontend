@@ -10,6 +10,7 @@ use App\Models\Reservation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\VehicleModel;
 use App\Models\TemporaryUpload;
+use App\Payments\BookingPayment;
 use App\Rules\IdNumber;
 use App\Rules\PhoneNumber;
 use App\Services\BookingQuote;
@@ -75,10 +76,13 @@ class WelcomeController extends Controller
         // The customer's bookings (web requests and ones made by staff), newest pick-up first; read only
         $bookings = $customer
             ? Reservation::where('customer_id', $customer->id)
-                ->with(['vehicleModel.media', 'vehicleClass', 'pickupLocation', 'returnLocation'])
+                ->with(['vehicleModel.media', 'vehicleClass', 'pickupLocation', 'returnLocation', 'vehicle.vehicleModel'])
                 ->orderByDesc('pickup_date')
                 ->orderByDesc('pickup_time')
                 ->get()
+                // Never paid and its pick-up time is gone: nothing left to do with it, so it isn't listed
+                ->reject(fn ($booking) => $booking->status === Reservation::STATUS_AWAITING_PAYMENT && BookingPayment::pickupPassed($booking))
+                ->values()
             : collect();
 
         $today = now()->toDateString();
@@ -90,6 +94,28 @@ class WelcomeController extends Controller
         ];
 
         return view('myaccount', compact('customer', 'bookings', 'bookingCounts'));
+    }
+
+    /**
+     * "Remove": the customer deletes their own booking that was never paid (staff never saw it).
+     * Soft-deleted, so a payment DOKU still confirms afterwards brings it back (BookingPayment::apply).
+     */
+    public function removeUnpaid(Reservation $reservation)
+    {
+        abort_unless(
+            $reservation->customer_id && $reservation->customer_id === Auth::user()->customer_id
+            && $reservation->isFrontend()
+            && $reservation->status === Reservation::STATUS_AWAITING_PAYMENT
+            && !$reservation->paymentTransactions()->where('status', 'paid')->exists(),
+            404
+        );
+
+        DB::transaction(function () use ($reservation) {
+            $reservation->paymentTransactions()->where('status', 'pending')->update(['status' => 'cancelled']);
+            $reservation->delete();
+        });
+
+        return redirect()->route('myaccount.index')->with('success', 'Booking ' . $reservation->code . ' removed.');
     }
 
     /**

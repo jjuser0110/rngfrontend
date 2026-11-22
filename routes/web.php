@@ -54,11 +54,15 @@ Route::middleware(['auth'])->group(function () {
 });
 // DOKU's server calls this; no login or CSRF token (see VerifyCsrfToken), checked by DOKU's signature instead
 Route::post('/payments/doku/notify', [PaymentController::class, 'notify'])->name('payments.doku.notify')->middleware('throttle:120,1');
+// LOCAL TESTING ONLY: fake DOKU payment page (404 unless DOKU_FAKE=true and APP_ENV=local)
+Route::get('/payments/fake-doku/{invoice}', [App\Http\Controllers\FakeDokuController::class, 'show'])->name('payments.fake-doku.show');
+Route::post('/payments/fake-doku/{invoice}', [App\Http\Controllers\FakeDokuController::class, 'act'])->name('payments.fake-doku.act');
 
 Route::middleware(['auth'])->prefix('/myaccount')->as('myaccount.')->group(function () {
     Route::get('/', [WelcomeController::class, 'myaccount'])->name('index');
     Route::put('/profile', [WelcomeController::class, 'updateProfile'])->name('profile.update');
     Route::get('/bookings/{reservation}/invoice', [WelcomeController::class, 'invoice'])->name('invoice');
+    Route::delete('/bookings/{reservation}', [WelcomeController::class, 'removeUnpaid'])->name('bookings.remove');
 });
 
 Route::view('/terms', 'terms')->name('terms');

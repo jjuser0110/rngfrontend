@@ -272,7 +272,7 @@
 
 <div class="d-xl-none fixed-bottom bg-white border-top shadow-lg p-3 d-flex align-items-center justify-content-between gap-3" style="z-index: 1050;">
     <div class="min-w-0">
-        <span class="text-uppercase fs-10 fw-bold tracking-wider d-block" style="color: #6c757d;">Estimated Total</span>
+        <span class="text-uppercase fs-10 fw-bold tracking-wider d-block" style="color: #6c757d;">{{ \App\Payments\BookingPayment::enabled() ? 'Rental Total' : 'Estimated Total' }}</span>
         <div class="fw-bold fs-18 text-truncate" style="color: #33383c;" id="booking-total">RM {{ number_format($quote['total'], 2) }}</div>
     </div>
     <button type="submit" form="cartForm" class="btn px-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm flex-shrink-0" style="background-color: #e9993e; border-color: #e9993e;">

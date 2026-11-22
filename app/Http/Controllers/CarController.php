@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Reservation;
 use App\Models\VehicleModel;
+use App\Payments\BookingPayment;
 use App\Rules\PhoneNumber;
 use App\Services\BookingQuote;
 use App\Support\WhatsApp;
@@ -290,7 +291,11 @@ class CarController extends Controller
 
         $quote = $this->quoteFor($vehicleModel, $draft);
 
-        $reservation = DB::transaction(function () use ($customer, $draft, $vehicleModel, $quote, $validated) {
+        // Online payment on: the customer pays first and staff only see the booking once it is paid (BookingPayment).
+        // Off: a booking request staff price and confirm, as before.
+        $payOnline = BookingPayment::enabled();
+
+        $reservation = DB::transaction(function () use ($customer, $draft, $vehicleModel, $quote, $validated, $payOnline) {
             $customer->update(['phone_number' => PhoneNumber::normalize($validated['phone_number'])]);
 
             $reservation = Reservation::create([
@@ -308,7 +313,7 @@ class CarController extends Controller
                 'vehicle_class_id'   => $vehicleModel->vehicle_class_id,
                 'vehicle_model_id'   => $vehicleModel->id,
                 'security_deposit'   => $quote['security_deposit'],
-                'status'             => 'Pending',
+                'status'             => $payOnline ? Reservation::STATUS_AWAITING_PAYMENT : 'Pending',
                 'source'             => 'frontend',
                 'created_by'         => Auth::id(),
             ]);
@@ -330,7 +335,7 @@ class CarController extends Controller
             }
 
             // Shown to staff in the reservation's comments
-            $note = 'Booked on the website.';
+            $note = $payOnline ? 'Booked and paid online on the website.' : 'Booked on the website.';
             if (collect($quote['charges'])->contains('name', ChargeType::DRIVER)) {
                 $note .= "\nDriver requested: please set the driver's days and price in step 3.";
             }
@@ -348,6 +353,19 @@ class CarController extends Controller
 
         session()->forget(self::SESSION_KEY);
         session(['booking_sent' => $reservation->id]);
+
+        if ($payOnline) {
+            try {
+                return redirect()->away(app(BookingPayment::class)->start($reservation, Auth::user()));
+            } catch (\Throwable $e) {
+                // The booking is kept: the customer can press "Pay" again on its page until it expires
+                report($e);
+
+                return redirect()->route('cars.confirmed', $reservation)
+                    ->with('payment_error', "Online payment isn't available right now. Please try again in a few minutes or contact us.")
+                    ->with('payment_error_for', $reservation->id);
+            }
+        }
 
         return redirect()->route('cars.confirmed', $reservation);
     }

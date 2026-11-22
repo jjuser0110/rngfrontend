@@ -36,11 +36,14 @@ return [
         'key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
-    // DOKU Checkout: customers pay the security deposit online (App\Payments\Doku).
+    // DOKU Checkout (SenangPay): website bookings are paid online (App\Payments\BookingPayment).
     // Client ID and Secret Key come from the DOKU Back Office. The Secret Key stays in .env only.
     'doku' => [
-        // Off until the keys are set and testing is done: no "Pay deposit" button, payment pages give 404
+        // Off until the keys are set and testing is done: bookings are requests staff price, as before
         'enabled'        => (bool) env('DOKU_ENABLED', false),
+        // Local testing without DOKU: a fake payment page on this website (App\Http\Controllers\FakeDokuController).
+        // Only works with APP_ENV=local; ignored anywhere else.
+        'fake'           => (bool) env('DOKU_FAKE', false),
         'client_id'      => env('DOKU_CLIENT_ID'),
         'secret_key'     => env('DOKU_SECRET_KEY'),
         // https://api-sandbox.doku.com for testing, https://api.doku.com when live
@@ -51,8 +54,9 @@ return [
         'due_minutes'    => (int) env('DOKU_PAYMENT_DUE_MINUTES', 60),
         // Limit the payment methods shown, comma separated DOKU codes (e.g. CREDIT_CARD); empty = all
         'methods'        => array_filter(explode(',', (string) env('DOKU_PAYMENT_METHODS', ''))),
-        // Booking statuses where the customer may pay the deposit (when to pay is still the client's choice)
-        'pay_statuses'   => array_filter(explode(',', (string) env('DOKU_PAY_STATUSES', 'Quote,Open'))),
+        // New bookings are paid when booking ("Awaiting Payment"). After that, a balance (e.g. a driver added by
+        // staff) can be paid online while the booking has one of these statuses.
+        'pay_statuses'   => array_filter(explode(',', (string) env('DOKU_PAY_STATUSES', 'Quote,Open,Rental'))),
     ],
 
 ];

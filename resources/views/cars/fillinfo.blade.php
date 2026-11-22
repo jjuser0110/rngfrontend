@@ -1,7 +1,23 @@
 @extends('layouts.app')
 
-@section('title', ($isConfirmed ? 'Booking Request Sent' : 'Your Details') . ' - ' . config('app.name', 'RNG Car Rental'))
-@section('meta_description', 'Confirm your contact details and send your car rental booking request.')
+@php
+    // Online payment on: the customer pays when booking (App\Payments\BookingPayment); off: a request staff price
+    $payOnline = \App\Payments\BookingPayment::enabled();
+    if ($isConfirmed) {
+        $awaitingPayment = $reservation->status === \App\Models\Reservation::STATUS_AWAITING_PAYMENT;
+        // Never paid, and its pick-up time is gone: it can't be paid any more
+        $tooLateToPay = $awaitingPayment && \App\Payments\BookingPayment::pickupPassed($reservation);
+        $paidOnline = $reservation->paymentTransactions()->where('status', 'paid')->exists();
+        [$pageTitle, $pageLead] = match (true) {
+            $tooLateToPay    => ['Not Paid', 'This booking was not paid before its pick-up time'],
+            $awaitingPayment => ['Complete Your Payment', 'Your booking is waiting for payment'],
+            $paidOnline      => ['Booking Paid', "We've received your booking and payment"],
+            default          => ['Request Sent', "We've received your booking request"],
+        };
+    }
+@endphp
+@section('title', ($isConfirmed ? $pageTitle : 'Your Details') . ' - ' . config('app.name', 'RNG Car Rental'))
+@section('meta_description', 'Confirm your contact details and book your car rental.')
 
 @section('content')
 @php
@@ -33,12 +49,12 @@
                     <div class="col-lg-8 offset-lg-2 col-md-10 offset-md-1 text-center">
                         @if ($isConfirmed)
                             <span class="text-white-50 px-3 py-1 mb-2 text-uppercase tracking-wider fs-11 d-inline-block border border-secondary rounded-pill">Step 3 of 3</span>
-                            <h1 class="fw-bold display-6 mb-2 fs-3 fs-md-2 text-break">Request Sent</h1>
-                            <p class="text-white-50 fs-14 fs-md-15 mb-0 text-break">We've received your booking request</p>
+                            <h1 class="fw-bold display-6 mb-2 fs-3 fs-md-2 text-break">{{ $pageTitle }}</h1>
+                            <p class="text-white-50 fs-14 fs-md-15 mb-0 text-break">{{ $pageLead }}</p>
                         @else
                             <span class="text-white-50 px-3 py-1 mb-2 text-uppercase tracking-wider fs-11 d-inline-block border border-secondary rounded-pill">Step 2 of 3</span>
                             <h1 class="fw-bold display-6 mb-2 fs-3 fs-md-2 text-break">Your Details</h1>
-                            <p class="text-white-50 fs-14 fs-md-15 mb-0 text-break">Check your contact details and send your request</p>
+                            <p class="text-white-50 fs-14 fs-md-15 mb-0 text-break">{{ $payOnline ? 'Check your details and pay to book' : 'Check your contact details and send your request' }}</p>
                         @endif
                     </div>
                 </div>
@@ -57,8 +73,12 @@
                     $whatsappLink = \App\Support\WhatsApp::link("Hi, I have a question about my booking request {$reservation->code}.");
                     // Staff confirm the price in rngcarrental (Quote); until then the total is the website's estimate
                     $isPending = $reservation->status === 'Pending';
-                    [$statusLabel] = \App\Support\BookingStatus::meta($reservation->status);
-                    $nextSteps = [
+                    [$statusLabel] = \App\Support\BookingStatus::meta($reservation->status, $paidOnline);
+                    $nextSteps = ($payOnline || $paidOnline) ? [
+                        ['fa-search', 'We confirm your booking', 'Our team checks your payment and details, confirms your booking and assigns your car. You can see your car in My Account.'],
+                        ['fa-whatsapp', 'We contact you if needed', "If you asked for a driver, or your car model isn't available, we'll contact you by WhatsApp or phone."],
+                        ['fa-id-card-o', 'Pick up your car', 'Bring your IC or passport and driving licence on the pick-up day.'],
+                    ] : [
                         ['fa-search', 'We check the car', "Our team checks the car for your dates. If this model isn't available, we'll suggest a similar one."],
                         ['fa-whatsapp', 'You get a quotation', 'Our team contacts you by WhatsApp, phone or email with the final price and how to pay the deposit. You can also see it in My Account.'],
                         ['fa-id-card-o', 'Pick up your car', 'Bring your IC or passport and driving licence on the pick-up day.'],
@@ -67,14 +87,30 @@
 
                 {{-- Success --}}
                 <div class="card border border-light shadow-sm rounded-3 bg-white p-4 p-md-5 mb-4 text-center sent-hero">
-                    <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
-                    @if ($isPending)
+                    @if ($tooLateToPay)
+                        <h2 class="fw-bold fs-24 text-ink mb-2">This booking was not paid</h2>
+                        <p class="fs-14 text-soft mb-3">Its pick-up time has passed, so it can't be paid any more. No payment was taken. You're welcome to book again.</p>
+                        <div class="mb-3">@include('payments.remove-booking', ['reservation' => $reservation, 'class' => 'btn btn-outline-danger btn-sm'])</div>
+                    @elseif ($awaitingPayment)
+                        {{-- Booking made, payment not finished: pay here (it stays unpaid until then) --}}
+                        <h2 class="fw-bold fs-24 text-ink mb-2">Complete your payment</h2>
+                        <p class="fs-14 text-soft mb-3">Your booking is saved but not paid yet. We only confirm it and keep a car for you once it is paid.</p>
+                        <div class="d-flex justify-content-center">@include('payments.payment-box', ['reservation' => $reservation])</div>
+                        <div class="mt-2 mb-3">@include('payments.remove-booking', ['reservation' => $reservation])</div>
+                    @elseif ($paidOnline && $reservation->status === 'Quote')
+                        <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
+                        <h2 class="fw-bold fs-24 text-ink mb-2">Booking paid</h2>
+                        <p class="fs-14 text-soft mb-3">Thank you, {{ $customer->first_name ?? 'we\'ve got it' }}! Our team will check and confirm your booking.</p>
+                    @elseif ($isPending)
+                        <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
                         <h2 class="fw-bold fs-24 text-ink mb-2">Booking request sent</h2>
                         <p class="fs-14 text-soft mb-3">Thank you, {{ $customer->first_name ?? 'we\'ve got it' }}! Our team will contact you by WhatsApp, phone or email with your final price.</p>
                     @elseif ($reservation->status === 'Quote')
+                        <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
                         <h2 class="fw-bold fs-24 text-ink mb-2">Your quotation is ready</h2>
                         <p class="fs-14 text-soft mb-3">The final price is below. Our team will contact you by WhatsApp, phone or email about paying the deposit.</p>
                     @else
+                        <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
                         <h2 class="fw-bold fs-24 text-ink mb-2">Your booking</h2>
                         <p class="fs-14 text-soft mb-3">Status: <strong class="text-ink">{{ $statusLabel }}</strong></p>
                     @endif
@@ -172,7 +208,10 @@
                                 <span class="fw-bold fs-20 text-ink">RM {{ number_format($reservation->total_price, 2) }}</span>
                             </div>
                             <p class="fs-12 text-soft mt-2 mb-0">{{ $reservation->security_deposit > 0 ? 'Plus a refundable security deposit of RM ' . number_format($reservation->security_deposit, 2) . '.' : 'No security deposit needed.' }}{{ $isPending ? ' Our team confirms the final price in your quotation.' : '' }}</p>
-                            @include('payments.deposit-box', ['reservation' => $reservation])
+                            {{-- (A booking still waiting for payment has its Pay button at the top) --}}
+                            @unless ($awaitingPayment)
+                                @include('payments.payment-box', ['reservation' => $reservation])
+                            @endunless
                         </div>
 
                         {{-- Help --}}
@@ -258,14 +297,18 @@
                             <div class="card border border-light shadow rounded-3 p-3 p-md-4 bg-white">
                                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light gap-2">
                                     <h5 class="fw-bold mb-0 fs-15 text-break" style="color: #33383c;">Request Overview</h5>
-                                    <span class="bg-light border px-2 py-1 fs-11 rounded-1 fw-semibold flex-shrink-0" style="color: #495057; border-color: #dee2e6 !important;"><i class="fa fa-file-invoice me-1" style="color: #e9993e;"></i> Estimate</span>
+                                    <span class="bg-light border px-2 py-1 fs-11 rounded-1 fw-semibold flex-shrink-0" style="color: #495057; border-color: #dee2e6 !important;"><i class="fa fa-file-invoice me-1" style="color: #e9993e;"></i> {{ $payOnline ? 'Pay now' : 'Estimate' }}</span>
                                 </div>
 
                                 @include('cars.partials.summary')
 
                                 @unless ($licenceExpired)
                                     <button type="submit" class="js-send-request btn btn-dark w-100 text-center border-0 py-3 mt-4 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-white d-none d-xl-flex align-items-center justify-content-center gap-2">
-                                        <span>Send Booking Request</span> <i class="fa fa-paper-plane"></i>
+                                        @if ($payOnline)
+                                            <span>Pay RM {{ number_format($quote['total'] + $quote['security_deposit'], 2) }} &amp; Book</span> <i class="fa fa-lock"></i>
+                                        @else
+                                            <span>Send Booking Request</span> <i class="fa fa-paper-plane"></i>
+                                        @endif
                                     </button>
                                 @endunless
                             </div>
@@ -283,14 +326,18 @@
 @if (!$isConfirmed)
 <div class="d-xl-none fixed-bottom bg-white border-top shadow-lg p-3 d-flex align-items-center justify-content-between gap-3" style="z-index: 1050;">
     <div class="min-w-0">
-        <span class="text-uppercase fs-10 fw-bold tracking-wider d-block text-truncate" style="color: #6c757d;">Estimated Total</span>
-        <div class="fw-bold fs-18 text-truncate" style="color: #33383c;">RM {{ number_format($quote['total'], 2) }}</div>
+        <span class="text-uppercase fs-10 fw-bold tracking-wider d-block text-truncate" style="color: #6c757d;">{{ $payOnline ? 'To pay now' : 'Estimated Total' }}</span>
+        <div class="fw-bold fs-18 text-truncate" style="color: #33383c;">RM {{ number_format($quote['total'] + ($payOnline ? $quote['security_deposit'] : 0), 2) }}</div>
     </div>
     @if ($licenceExpired)
         <a href="{{ route('myaccount.index') }}" class="btn btn-danger px-3 py-2 text-uppercase fw-semibold fs-12 rounded-2 shadow-sm flex-shrink-0 text-nowrap">Update licence</a>
     @else
         <button type="submit" form="detailsForm" class="js-send-request btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
-            <span>Send Request</span> <i class="fa fa-paper-plane"></i>
+            @if ($payOnline)
+                <span>Pay &amp; Book</span> <i class="fa fa-lock"></i>
+            @else
+                <span>Send Request</span> <i class="fa fa-paper-plane"></i>
+            @endif
         </button>
     @endif
 </div>

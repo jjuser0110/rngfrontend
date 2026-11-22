@@ -17,6 +17,12 @@ class Reservation extends Model implements HasMedia
     use SoftDeletes;
     use InteractsWithMedia;
 
+    /**
+     * Website booking paid online (App\Payments\BookingPayment) still waiting for the customer's payment.
+     * Hidden from staff in rngcarrental (its Reservation global scope uses the same name).
+     */
+    public const STATUS_AWAITING_PAYMENT = 'Awaiting Payment';
+
     protected $fillable = [
         'company_id',
         'customer_id',

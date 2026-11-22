@@ -2,14 +2,24 @@
 
 namespace App\Payments\Doku;
 
+use App\Models\PaymentTransaction;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
 
-/** Calls to DOKU: open a Checkout payment page, and ask for a payment's status. Settings: config('services.doku'). */
+/**
+ * Calls to DOKU: open a Checkout payment page, and ask for a payment's status. Settings: config('services.doku').
+ *
+ * Fake mode (DOKU_FAKE=true, only with APP_ENV=local): nothing is sent to DOKU. The payment page is
+ * FakeDokuController's test page on this website, and the status comes from that page's choice.
+ */
 class DokuClient
 {
     public const CHECKOUT_PATH = '/checkout/v1/payment';
+
+    /** Credentials the fake mode signs with when no real keys are set. */
+    private const FAKE_CLIENT_ID = 'FAKE-DOKU-CLIENT';
+    private const FAKE_SECRET_KEY = 'fake-doku-secret-key';
 
     public function __construct(private array $config)
     {
@@ -20,9 +30,29 @@ class DokuClient
         return new self(config('services.doku'));
     }
 
+    /** Fake mode, and only on a developer's PC (or in the automated tests). */
+    public function isFake(): bool
+    {
+        return !empty($this->config['fake']) && app()->environment('local', 'testing');
+    }
+
     public function isConfigured(): bool
     {
-        return !empty($this->config['enabled']) && !empty($this->config['client_id']) && !empty($this->config['secret_key']);
+        if (empty($this->config['enabled'])) {
+            return false;
+        }
+
+        return $this->isFake() || (!empty($this->config['client_id']) && !empty($this->config['secret_key']));
+    }
+
+    public function clientId(): string
+    {
+        return (string) ($this->config['client_id'] ?: ($this->isFake() ? self::FAKE_CLIENT_ID : ''));
+    }
+
+    public function secretKey(): string
+    {
+        return (string) ($this->config['secret_key'] ?: ($this->isFake() ? self::FAKE_SECRET_KEY : ''));
     }
 
     /**
@@ -32,6 +62,14 @@ class DokuClient
      */
     public function createCheckout(array $order, array $customer = [], ?string $notificationUrl = null): array
     {
+        if ($this->isFake()) {
+            return ['payment' => [
+                'url'          => route('payments.fake-doku.show', $order['invoice_number']),
+                'token_id'     => 'fake-' . Str::random(10),
+                'expired_date' => now('Asia/Jakarta')->addMinutes($this->config['due_minutes'] ?: 60)->format('YmdHis'),
+            ]];
+        }
+
         $body = [
             'order' => $order + [
                 'currency'              => $this->config['currency'],
@@ -64,6 +102,16 @@ class DokuClient
     /** Status of an order by its invoice number: the same shape as a notification (transaction.status ...). */
     public function status(string $invoiceNumber): array
     {
+        if ($this->isFake()) {
+            // What was chosen on the fake page; until then, still waiting
+            $transaction = PaymentTransaction::where('reference', $invoiceNumber)->first();
+
+            return [
+                'order'       => ['invoice_number' => $invoiceNumber, 'amount' => (float) ($transaction->amount ?? 0)],
+                'transaction' => ['status' => $transaction->payload['fake_status'] ?? 'PENDING', 'date' => now('UTC')->format('Y-m-d\TH:i:s\Z')],
+            ];
+        }
+
         return $this->send('GET', '/orders/v1/status/' . rawurlencode($invoiceNumber));
     }
 
@@ -79,10 +127,10 @@ class DokuClient
         $timestamp = now('UTC')->format('Y-m-d\TH:i:s\Z');
 
         $request = Http::timeout(30)->acceptJson()->withHeaders([
-            'Client-Id'         => $this->config['client_id'],
+            'Client-Id'         => $this->clientId(),
             'Request-Id'        => $requestId,
             'Request-Timestamp' => $timestamp,
-            'Signature'         => DokuSignature::make($this->config['client_id'], $requestId, $timestamp, $path, $json, $this->config['secret_key']),
+            'Signature'         => DokuSignature::make($this->clientId(), $requestId, $timestamp, $path, $json, $this->secretKey()),
         ]);
         $url = rtrim($this->config['base_url'], '/') . $path;
 

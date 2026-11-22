@@ -1,6 +1,7 @@
 {{-- One of the customer's bookings in My Account (read only). Expects $booking (Reservation). --}}
 @php
-    [$statusLabel, $statusClass] = \App\Support\BookingStatus::meta($booking->status);
+    $paidOnline = $booking->status === 'Quote' && $booking->paymentTransactions()->where('status', 'paid')->exists();
+    [$statusLabel, $statusClass] = \App\Support\BookingStatus::meta($booking->status, $paidOnline);
     $placeOf = fn($side) => $booking->{$side . '_location_id'}
         ? ($booking->{$side === 'pickup' ? 'pickupLocation' : 'returnLocation'}->name ?? '')
         : $booking->{$side . '_address'};
@@ -39,7 +40,19 @@
         @if ($booking->hasCustomerInvoice())
             <a href="{{ route('myaccount.invoice', $booking) }}" class="booking-link fs-12"><i class="fa fa-file-pdf-o me-1" aria-hidden="true"></i> Download invoice {{ $booking->invoice_no }}</a>
         @endif
+        @include('payments.remove-booking', ['reservation' => $booking])
     </div>
 
-    @include('payments.deposit-box', ['reservation' => $booking, 'compact' => true])
+    {{-- The car staff assigned when they confirmed the booking --}}
+    @if ($booking->vehicle && in_array($booking->status, ['Open', 'Rental'], true))
+        <div class="fs-13 mt-2">
+            <i class="fa fa-car accent me-1" aria-hidden="true"></i>Your car:
+            <strong class="text-ink">{{ $booking->vehicle->vehicleModel->name ?? $carName }}</strong>
+            @if ($booking->vehicle->license_plate)
+                <span class="ms-1 px-2 py-0 border rounded fw-bold text-ink" style="letter-spacing: .5px;">{{ $booking->vehicle->license_plate }}</span>
+            @endif
+        </div>
+    @endif
+
+    @include('payments.payment-box', ['reservation' => $booking, 'compact' => true])
 </div>

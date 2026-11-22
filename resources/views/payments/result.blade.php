@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Deposit Payment - ' . config('app.name', 'RNG Car Rental'))
+@section('title', 'Payment - ' . config('app.name', 'RNG Car Rental'))
 
 @section('content')
 @php
@@ -11,7 +11,7 @@
         'review'  => 'review',
         default   => 'pending',
     };
-    $whatsappLink = \App\Support\WhatsApp::link("Hi, I have a question about the deposit payment for my booking {$reservation->code} (payment {$transaction->reference}).");
+    $whatsappLink = \App\Support\WhatsApp::link("Hi, I have a question about the payment for my booking {$reservation->code} (payment {$transaction->reference}).");
 @endphp
 <div class="no-bottom no-top" id="content">
     <div id="top"></div>
@@ -22,17 +22,21 @@
             <div class="card border border-light shadow-sm rounded-3 bg-white p-4 p-md-5 text-center">
                 @if ($state === 'paid')
                     <i class="fa fa-check-circle fa-3x mb-3" style="color: #198754;" aria-hidden="true"></i>
-                    <h1 class="fw-bold fs-24 text-ink mb-2">Deposit paid</h1>
-                    <p class="fs-14 text-soft mb-1">Thank you! We received your security deposit of <strong class="text-ink">RM {{ number_format($transaction->amount, 2) }}</strong>.</p>
-                    <p class="fs-13 text-soft mb-4">It is refunded after your rental, as set out in your booking.</p>
+                    <h1 class="fw-bold fs-24 text-ink mb-2">Payment received</h1>
+                    <p class="fs-14 text-soft mb-1">Thank you! We received <strong class="text-ink">RM {{ number_format($transaction->amount, 2) }}</strong>.</p>
+                    @if ($reservation->status === 'Quote')
+                        <p class="fs-13 text-soft mb-4">Our team will check and confirm your booking, and assign your car. You'll see it in My Account.</p>
+                    @else
+                        <p class="fs-13 text-soft mb-4">Your booking is up to date. Any security deposit is refunded after your rental.</p>
+                    @endif
                 @elseif ($state === 'expired')
                     <i class="fa fa-clock-o fa-3x mb-3 text-soft" aria-hidden="true"></i>
                     <h1 class="fw-bold fs-24 text-ink mb-2">Payment time ran out</h1>
-                    <p class="fs-14 text-soft mb-4">No payment was taken. You can try again from your booking.</p>
+                    <p class="fs-14 text-soft mb-4">No payment was taken. You can try again from your booking in My Account.</p>
                 @elseif ($state === 'review')
                     <i class="fa fa-info-circle fa-3x mb-3 accent" aria-hidden="true"></i>
                     <h1 class="fw-bold fs-24 text-ink mb-2">We're checking your payment</h1>
-                    <p class="fs-14 text-soft mb-4">Our team will confirm your deposit shortly. You don't need to pay again.</p>
+                    <p class="fs-14 text-soft mb-4">Our team will confirm your payment shortly. You don't need to pay again.</p>
                 @else
                     <i class="fa fa-hourglass-half fa-3x mb-3 accent" aria-hidden="true"></i>
                     <h1 class="fw-bold fs-24 text-ink mb-2">Waiting for payment confirmation</h1>
