@@ -21,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
         // The old sample listings (App\Catalog\Sample, resources/data) are no longer used.
         $this->app->singleton(HomestayCatalog::class, DatabaseHomestayCatalog::class);
         $this->app->singleton(TourCatalog::class, DatabaseTourCatalog::class);
+
+        // DOKU online payment (config/services.php "doku")
+        $this->app->bind(\App\Payments\Doku\DokuClient::class, fn () => \App\Payments\Doku\DokuClient::fromConfig());
     }
 
     /**

@@ -172,6 +172,7 @@
                                 <span class="fw-bold fs-20 text-ink">RM {{ number_format($reservation->total_price, 2) }}</span>
                             </div>
                             <p class="fs-12 text-soft mt-2 mb-0">{{ $reservation->security_deposit > 0 ? 'Plus a refundable security deposit of RM ' . number_format($reservation->security_deposit, 2) . '.' : 'No security deposit needed.' }}{{ $isPending ? ' Our team confirms the final price in your quotation.' : '' }}</p>
+                            @include('payments.deposit-box', ['reservation' => $reservation])
                         </div>
 
                         {{-- Help --}}

@@ -40,4 +40,6 @@
             <a href="{{ route('myaccount.invoice', $booking) }}" class="booking-link fs-12"><i class="fa fa-file-pdf-o me-1" aria-hidden="true"></i> Download invoice {{ $booking->invoice_no }}</a>
         @endif
     </div>
+
+    @include('payments.deposit-box', ['reservation' => $booking, 'compact' => true])
 </div>

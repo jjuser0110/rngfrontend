@@ -45,6 +45,16 @@ Route::get('/homestays/{slug}', [HomestayController::class, 'show'])->name('home
 Route::get('/tours', [TourController::class, 'index'])->name('tours.index');
 Route::get('/tours/{slug}', [TourController::class, 'show'])->name('tours.show');
 
+// Security deposit paid online with DOKU (off until DOKU_ENABLED and the keys are set)
+use App\Http\Controllers\PaymentController;
+
+Route::middleware(['auth'])->group(function () {
+    Route::post('/bookings/{reservation}/pay-deposit', [PaymentController::class, 'pay'])->name('payments.doku.pay')->middleware('throttle:10,1');
+    Route::get('/bookings/{reservation}/payment/{transaction}', [PaymentController::class, 'result'])->name('payments.doku.result');
+});
+// DOKU's server calls this; no login or CSRF token (see VerifyCsrfToken), checked by DOKU's signature instead
+Route::post('/payments/doku/notify', [PaymentController::class, 'notify'])->name('payments.doku.notify')->middleware('throttle:120,1');
+
 Route::middleware(['auth'])->prefix('/myaccount')->as('myaccount.')->group(function () {
     Route::get('/', [WelcomeController::class, 'myaccount'])->name('index');
     Route::put('/profile', [WelcomeController::class, 'updateProfile'])->name('profile.update');
