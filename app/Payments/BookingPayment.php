@@ -10,6 +10,7 @@ use App\Payments\Doku\DokuClient;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Website bookings paid online with DOKU (SenangPay).
@@ -171,8 +172,8 @@ class BookingPayment
 
         $code = $reservation->code ?? $reservation->id;
         $lines = array_values(array_filter([
-            $due['payment'] > 0 ? ['id' => 'rental-' . $reservation->id, 'name' => "Car rental, booking $code", 'price' => self::dokuAmount($due['payment']), 'quantity' => 1] : null,
-            $due['deposit'] > 0 ? ['id' => 'deposit-' . $reservation->id, 'name' => "Refundable security deposit, booking $code", 'price' => self::dokuAmount($due['deposit']), 'quantity' => 1] : null,
+            $due['payment'] > 0 ? ['id' => 'rental-' . $reservation->id, 'name' => self::dokuText("Car rental, booking $code"), 'price' => self::dokuAmount($due['payment']), 'quantity' => 1] : null,
+            $due['deposit'] > 0 ? ['id' => 'deposit-' . $reservation->id, 'name' => self::dokuText("Refundable security deposit, booking $code"), 'price' => self::dokuAmount($due['deposit']), 'quantity' => 1] : null,
         ]));
 
         $resultUrl = route('payments.doku.result', [$reservation, $transaction]);
@@ -188,7 +189,7 @@ class BookingPayment
                 // Required by DOKU (Malaysia): name, email and phone
                 array_filter([
                     'id'    => (string) $reservation->customer_id,
-                    'name'  => mb_substr((string) ($reservation->customer->full_name ?? ''), 0, 255),
+                    'name'  => self::dokuText($reservation->customer->full_name ?? null) ?: 'Customer ' . $reservation->customer_id,
                     'email' => $reservation->customer->email ?? null,
                     'phone' => self::dokuPhone($reservation->customer->phone_number ?? null),
                 ]),
@@ -319,6 +320,14 @@ class BookingPayment
         }
 
         return substr($digits, 0, 16);
+    }
+
+    /** Text DOKU accepts: letters, digits, spaces and . - / + , = _ : ' @ % ( ) only. "RA #12" -> "RA 12", "José" -> "Jose". */
+    public static function dokuText(?string $text): string
+    {
+        $text = preg_replace("~[^a-zA-Z0-9 .\-/+,=_:'@%()]~", ' ', Str::ascii((string) $text));
+
+        return substr(trim(preg_replace('/ +/', ' ', $text)), 0, 255);
     }
 
     /** Whole ringgit as a whole number, otherwise with its sen. */

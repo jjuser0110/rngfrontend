@@ -228,6 +228,23 @@ class BookingPaymentTest extends TestCase
         $this->assertSame(16, strlen(\App\Payments\BookingPayment::dokuPhone('+60 12345678901234567')));
     }
 
+    public function test_text_sent_to_doku_has_only_allowed_characters(): void
+    {
+        $this->assertSame('Car rental, booking RA 3434', \App\Payments\BookingPayment::dokuText('Car rental, booking RA #3434'));
+        $this->assertSame("Jose O'Neil A/L Tan - Co", \App\Payments\BookingPayment::dokuText("José O'Neil A/L Tan - & Co!"));
+        $this->assertSame('', \App\Payments\BookingPayment::dokuText(null));
+
+        // In the real request: the booking number has a "#", and so does this name
+        $user = $this->customerUser(['first_name' => 'Zoë #1', 'last_name' => '& Co']);
+        $this->startPayment($user, $this->booking($user));
+        Http::assertSent(function (HttpRequest $request) {
+            $data = json_decode($request->body(), true);
+            $texts = [...array_column($data['order']['line_items'], 'name'), $data['customer']['name']];
+
+            return $data['customer']['name'] === 'Zoe 1 Co' && collect($texts)->every(fn ($t) => preg_match("~^[a-zA-Z0-9 .\-/+,=_:'@%()]+$~", $t));
+        });
+    }
+
     public function test_paid_booking_becomes_a_quote_with_two_payments_for_staff(): void
     {
         $user = $this->customerUser();
