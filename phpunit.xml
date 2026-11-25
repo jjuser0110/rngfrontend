@@ -28,5 +28,11 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <!-- Online payment off and no real DOKU keys in tests, whatever .env says: tests never call DOKU.
+             The payment tests switch it on themselves with DOKU faked. -->
+        <env name="DOKU_ENABLED" value="false" force="true"/>
+        <env name="DOKU_FAKE" value="false" force="true"/>
+        <env name="DOKU_CLIENT_ID" value="" force="true"/>
+        <env name="DOKU_SECRET_KEY" value="" force="true"/>
     </php>
 </phpunit>

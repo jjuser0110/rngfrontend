@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Validation\Rule;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -46,6 +47,35 @@ class Customer extends Authenticatable implements HasMedia
     public function licenceExpired(): bool
     {
         return $this->expiration_date && \Carbon\Carbon::parse($this->expiration_date)->lt(today());
+    }
+
+    /**
+     * Validation rules for the email a customer without one types when booking or paying (DOKU requires it).
+     * It must not be another login's email: logins and password resets go by it.
+     */
+    public static function missingEmailRules(User $user, bool $required): array
+    {
+        return [$required ? 'required' : 'nullable', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)];
+    }
+
+    public static function missingEmailMessages(): array
+    {
+        return [
+            'email.required' => 'Please enter your email. It is needed for online payment.',
+            'email.unique'   => 'This email is already used by another account. Please use a different one.',
+        ];
+    }
+
+    /** Save it on the customer, and on the login when that has none either. An existing email is never changed. */
+    public function saveMissingEmail(User $user, ?string $email): void
+    {
+        if (!$email || $this->email) {
+            return;
+        }
+        $this->update(['email' => $email]);
+        if (!$user->email) {
+            $user->update(['email' => $email]);
+        }
     }
 
     /** Security deposit for this customer's bookings: none when staff switched it off for them. */

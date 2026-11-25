@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\PaymentTransaction;
 use App\Models\Reservation;
 use App\Payments\BookingPayment;
@@ -9,6 +10,7 @@ use App\Payments\Doku\DokuClient;
 use App\Payments\Doku\DokuSignature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 /** Website bookings paid online with DOKU: the Pay button, the result page, and DOKU's payment notification. */
 class PaymentController extends Controller
@@ -17,8 +19,8 @@ class PaymentController extends Controller
     {
     }
 
-    /** "Pay": off to DOKU's payment page for what is due on this booking. */
-    public function pay(Reservation $reservation)
+    /** "Pay": off to DOKU's payment page for what is due on this booking ("pay_option=deposit": the deposit only). */
+    public function pay(Request $request, Reservation $reservation)
     {
         abort_unless(BookingPayment::enabled(), 404);
         $this->ownBooking($reservation);
@@ -27,8 +29,18 @@ class PaymentController extends Controller
             return $this->backWithError($reservation, 'There is nothing to pay for this booking right now.');
         }
 
+        // DOKU needs an email: a customer without one types it next to the Pay button
+        $customer = $reservation->customer;
+        if (!$customer->email) {
+            $check = Validator::make($request->all(), ['email' => Customer::missingEmailRules(auth()->user(), true)], Customer::missingEmailMessages());
+            if ($check->fails()) {
+                return $this->backWithError($reservation, $check->errors()->first('email'))->withInput();
+            }
+            $customer->saveMissingEmail(auth()->user(), $check->validated()['email']);
+        }
+
         try {
-            return redirect()->away($this->payments->start($reservation, auth()->user()));
+            return redirect()->away($this->payments->start($reservation, auth()->user(), $request->input('pay_option') === 'deposit'));
         } catch (\Throwable $e) {
             report($e);
 

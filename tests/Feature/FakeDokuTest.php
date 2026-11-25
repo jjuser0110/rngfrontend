@@ -33,7 +33,7 @@ class FakeDokuTest extends TestCase
         config(['services.doku' => [
             'enabled' => true, 'fake' => true, 'client_id' => null, 'secret_key' => null,
             'base_url' => 'https://api-sandbox.doku.com', 'currency' => 'MYR', 'due_minutes' => 60,
-            'methods' => [], 'pay_statuses' => ['Quote', 'Open', 'Rental'],
+            'methods' => [], 'pay_statuses' => ['Open', 'Rental'],
         ]]);
         Http::preventStrayRequests(); // nothing may go to DOKU
     }

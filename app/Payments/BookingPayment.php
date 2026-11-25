@@ -17,7 +17,11 @@ use Illuminate\Support\Facades\Log;
  *  - "Pay & book": the customer pays the rental (with insurance) and the security deposit. The booking waits as
  *    "Awaiting Payment" (hidden from staff) and becomes a Quote once DOKU confirms the payment. An unpaid one
  *    simply stays unpaid; the customer can pay it later from My Account, until its pick-up time.
- *  - "Pay balance": after staff change the price, whatever is still due can be paid the same way.
+ *    The customer chooses to pay the full amount, or the deposit only (the rental is paid after staff confirm).
+ *    A customer with no deposit who chooses "Book now, pay later" pays nothing now: the booking goes straight to
+ *    a Quote, marked by a payment_transactions row with status "pay_later" (gateway "website", amount 0).
+ *  - "Pay balance" (only with DOKU_PAY_BALANCE_ONLINE): once staff confirm (status Open / Rental), whatever is still
+ *    due can be paid the same way. Off (the default): staff collect it by hand; the customer only sees the balance.
  *
  * Each attempt is a payment_transactions row (gateway "doku", reference = the DOKU invoice number). Only DOKU's
  * signed notification, or DOKU's own status answer, marks it paid. That records it once as Payments staff see in
@@ -27,6 +31,10 @@ class BookingPayment
 {
     public const GATEWAY = 'doku';
     public const METHOD = 'Online Payment (DOKU)';
+
+    /** "Book now, pay later" marker (no payment): shows staff the Quote is a website booking to confirm. */
+    public const PAY_LATER_GATEWAY = 'website';
+    public const PAY_LATER = 'pay_later';
 
     public function __construct(private DokuClient $doku)
     {
@@ -63,9 +71,67 @@ class BookingPayment
 
         $payable = $reservation->status === Reservation::STATUS_AWAITING_PAYMENT
             ? !self::pickupPassed($reservation) // no paying for dates already gone
-            : in_array($reservation->status, config('services.doku.pay_statuses', []), true);
+            : self::balanceOnline() && in_array($reservation->status, config('services.doku.pay_statuses', []), true);
 
         return $payable && self::due($reservation)['total'] > 0;
+    }
+
+    /** What is left after booking (rest of the rental, extra charges) may be paid online (DOKU_PAY_BALANCE_ONLINE). */
+    public static function balanceOnline(): bool
+    {
+        return (bool) config('services.doku.pay_balance_online', false);
+    }
+
+    /** A new booking with both a rental and a deposit to pay may be paid with the deposit only (the rest after confirm). */
+    public static function canPayDepositOnly(Reservation $reservation): bool
+    {
+        $due = self::due($reservation);
+
+        return self::depositOnlyAllowed()
+            && $reservation->status === Reservation::STATUS_AWAITING_PAYMENT
+            && $due['payment'] > 0 && $due['deposit'] > 0;
+    }
+
+    /** The "Pay deposit only" / "Book now, pay later" choice on the details page (DOKU_ALLOW_DEPOSIT_ONLY). */
+    public static function depositOnlyAllowed(): bool
+    {
+        return self::enabled() && (bool) config('services.doku.allow_deposit_only', true);
+    }
+
+    /** "Book now, pay later": a Quote for staff to confirm, nothing paid. */
+    public static function bookPayLater(Reservation $reservation, User $user): void
+    {
+        PaymentTransaction::create([
+            'reservation_id' => $reservation->id,
+            'gateway'        => self::PAY_LATER_GATEWAY,
+            'amount'         => 0,
+            'currency'       => config('services.doku.currency'),
+            'status'         => self::PAY_LATER,
+            'payload'        => ['user_id' => $user->id],
+        ]);
+        $reservation->update(['status' => 'Quote']);
+    }
+
+    /**
+     * How a website Quote waiting for staff was booked: 'paid' (full amount), 'deposit' (deposit only),
+     * 'pay_later' (nothing paid), or null (not one of those).
+     */
+    public static function websiteQuoteKind(Reservation $reservation): ?string
+    {
+        if ($reservation->status !== 'Quote' || !$reservation->isFrontend()) {
+            return null;
+        }
+
+        $statuses = $reservation->paymentTransactions()->whereIn('status', ['paid', self::PAY_LATER])->pluck('status');
+        if ($statuses->contains('paid')) {
+            // Deposit only: no rental payment at all yet (a full payment stays "paid" even if staff raise the price)
+            $rentalPaid = Payment::where('reservation_id', $reservation->id)->where('payment_type', 'Payment')
+                ->where(fn ($q) => $q->whereNull('payment_status')->orWhere('payment_status', '!=', 'Denied'))->exists();
+
+            return $rentalPaid ? 'paid' : 'deposit';
+        }
+
+        return $statuses->contains(self::PAY_LATER) ? self::PAY_LATER : null;
     }
 
     public static function pickupPassed(Reservation $reservation): bool
@@ -73,10 +139,16 @@ class BookingPayment
         return Carbon::parse($reservation->pickup_date . ' ' . $reservation->pickup_time)->isPast();
     }
 
-    /** DOKU payment page for what is due: an open one for the same amount is reused, else a new one is made. */
-    public function start(Reservation $reservation, User $user): string
+    /**
+     * DOKU payment page for what is due: an open one for the same amount is reused, else a new one is made.
+     * $depositOnly: a new booking paid with the deposit only (when allowed); the rental is paid after staff confirm.
+     */
+    public function start(Reservation $reservation, User $user, bool $depositOnly = false): string
     {
         $due = self::due($reservation);
+        if ($depositOnly && self::canPayDepositOnly($reservation)) {
+            $due = ['payment' => 0, 'deposit' => $due['deposit'], 'total' => $due['deposit']];
+        }
 
         $open = $reservation->paymentTransactions()
             ->where('gateway', self::GATEWAY)->where('status', 'pending')->latest('id')->get()
@@ -113,10 +185,12 @@ class BookingPayment
                     'callback_url_result' => $resultUrl,
                     'line_items'          => $lines,
                 ],
+                // Required by DOKU (Malaysia): name, email and phone
                 array_filter([
                     'id'    => (string) $reservation->customer_id,
-                    'name'  => $reservation->customer->full_name ?? null,
+                    'name'  => mb_substr((string) ($reservation->customer->full_name ?? ''), 0, 255),
                     'email' => $reservation->customer->email ?? null,
+                    'phone' => self::dokuPhone($reservation->customer->phone_number ?? null),
                 ]),
                 route('payments.doku.notify'),
             );
@@ -228,6 +302,23 @@ class BookingPayment
 
             return $transaction;
         }
+    }
+
+    /**
+     * Phone as DOKU wants it: country code and number, digits only, max 16 (e.g. 60123456789).
+     * "+60 12-345 6789" -> 60123456789; a local "012-345 6789" is Malaysian -> 60123456789.
+     */
+    public static function dokuPhone(?string $phone): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone);
+        if ($digits === '') {
+            return null;
+        }
+        if (str_starts_with($digits, '0')) {
+            $digits = '6' . $digits;
+        }
+
+        return substr($digits, 0, 16);
     }
 
     /** Whole ringgit as a whole number, otherwise with its sen. */

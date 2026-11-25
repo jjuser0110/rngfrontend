@@ -55,8 +55,13 @@ return [
         // Limit the payment methods shown, comma separated DOKU codes (e.g. CREDIT_CARD); empty = all
         'methods'        => array_filter(explode(',', (string) env('DOKU_PAYMENT_METHODS', ''))),
         // New bookings are paid when booking ("Awaiting Payment"). After that, a balance (e.g. a driver added by
-        // staff) can be paid online while the booking has one of these statuses.
-        'pay_statuses'   => array_filter(explode(',', (string) env('DOKU_PAY_STATUSES', 'Quote,Open,Rental'))),
+        // staff, or the rental after paying the deposit only) can be paid online once staff confirmed the booking.
+        'pay_statuses'   => array_filter(explode(',', (string) env('DOKU_PAY_STATUSES', 'Open,Rental'))),
+        // Details page choice: pay the full amount, or the deposit only ("Book now, pay later" with no deposit)
+        'allow_deposit_only' => (bool) env('DOKU_ALLOW_DEPOSIT_ONLY', true),
+        // Pay what is left (rest of the rental, extra charges) online after staff confirm. Off: staff collect it by
+        // hand (at the counter); the customer only sees the balance. Only the payment when booking is online.
+        'pay_balance_online' => (bool) env('DOKU_PAY_BALANCE_ONLINE', false),
     ],
 
 ];

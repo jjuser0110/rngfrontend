@@ -277,10 +277,17 @@ class CarController extends Controller
             return redirect()->route('cars.fillinfo')->withErrors('Your driving licence has expired. Please update it in My Account before sending a booking request.');
         }
 
-        $validated = $request->validate([
+        // DOKU needs an email: a customer without one types it here (not for "Book now, pay later", which pays nothing)
+        $payOnline = BookingPayment::enabled();
+        $paysNothingNow = BookingPayment::depositOnlyAllowed() && $request->input('pay_option') === 'deposit' && $customer->securityDeposit() <= 0;
+        $asksEmail = $payOnline && !$customer->email;
+
+        $validated = $request->validate(($asksEmail ? ['email' => Customer::missingEmailRules(Auth::user(), !$paysNothingNow)] : []) + [
             'phone_number'   => ['required', 'string', 'max:20', new PhoneNumber],
             'customer_notes' => 'nullable|string|max:1000',
-        ]);
+            // Online payment: 'full' (default) or 'deposit' (deposit only; "Book now, pay later" with no deposit)
+            'pay_option'     => 'nullable|in:full,deposit',
+        ], Customer::missingEmailMessages());
 
         // The schedule may have gone stale while the customer filled in details (e.g. pickup time passed)
         $scheduleCheck = Validator::make($draft, $this->scheduleRules(), $this->scheduleMessages());
@@ -293,10 +300,13 @@ class CarController extends Controller
 
         // Online payment on: the customer pays first and staff only see the booking once it is paid (BookingPayment).
         // Off: a booking request staff price and confirm, as before.
-        $payOnline = BookingPayment::enabled();
+        $depositOnly = $payOnline && BookingPayment::depositOnlyAllowed() && ($validated['pay_option'] ?? 'full') === 'deposit';
+        // No deposit for this customer: "deposit only" is "Book now, pay later", a Quote for staff with nothing paid
+        $payLater = $depositOnly && $quote['security_deposit'] <= 0;
 
-        $reservation = DB::transaction(function () use ($customer, $draft, $vehicleModel, $quote, $validated, $payOnline) {
+        $reservation = DB::transaction(function () use ($customer, $draft, $vehicleModel, $quote, $validated, $payOnline, $depositOnly, $payLater) {
             $customer->update(['phone_number' => PhoneNumber::normalize($validated['phone_number'])]);
+            $customer->saveMissingEmail(Auth::user(), $validated['email'] ?? null);
 
             $reservation = Reservation::create([
                 'customer_id'        => $customer->id,
@@ -335,7 +345,12 @@ class CarController extends Controller
             }
 
             // Shown to staff in the reservation's comments
-            $note = $payOnline ? 'Booked and paid online on the website.' : 'Booked on the website.';
+            $note = match (true) {
+                $payLater    => 'Booked on the website: book now, pay later (no deposit needed). Nothing paid yet.',
+                $depositOnly => 'Booked on the website, paying the deposit only online. The rental is paid after confirmation, online or at the counter.',
+                $payOnline   => 'Booked and paid online on the website.',
+                default      => 'Booked on the website.',
+            };
             if (collect($quote['charges'])->contains('name', ChargeType::DRIVER)) {
                 $note .= "\nDriver requested: please set the driver's days and price in step 3.";
             }
@@ -348,15 +363,19 @@ class CarController extends Controller
             $reservation->unsetRelation('chargeDetails');
             $reservation->recalculateTotalPrice();
 
+            if ($payLater) {
+                BookingPayment::bookPayLater($reservation, Auth::user());
+            }
+
             return $reservation;
         });
 
         session()->forget(self::SESSION_KEY);
         session(['booking_sent' => $reservation->id]);
 
-        if ($payOnline) {
+        if ($payOnline && !$payLater) {
             try {
-                return redirect()->away(app(BookingPayment::class)->start($reservation, Auth::user()));
+                return redirect()->away(app(BookingPayment::class)->start($reservation, Auth::user(), $depositOnly));
             } catch (\Throwable $e) {
                 // The booking is kept: the customer can press "Pay" again on its page until it expires
                 report($e);

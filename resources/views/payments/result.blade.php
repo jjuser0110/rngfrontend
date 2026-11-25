@@ -24,7 +24,9 @@
                     <i class="fa fa-check-circle fa-3x mb-3" style="color: #198754;" aria-hidden="true"></i>
                     <h1 class="fw-bold fs-24 text-ink mb-2">Payment received</h1>
                     <p class="fs-14 text-soft mb-1">Thank you! We received <strong class="text-ink">RM {{ number_format($transaction->amount, 2) }}</strong>.</p>
-                    @if ($reservation->status === 'Quote')
+                    @if ($reservation->status === 'Quote' && \App\Payments\BookingPayment::websiteQuoteKind($reservation) === 'deposit')
+                        <p class="fs-13 text-soft mb-4">Our team will check and confirm your booking, and assign your car. The rental is paid at the counter when you pick up your car, or our staff will contact you about payment.</p>
+                    @elseif ($reservation->status === 'Quote')
                         <p class="fs-13 text-soft mb-4">Our team will check and confirm your booking, and assign your car. You'll see it in My Account.</p>
                     @else
                         <p class="fs-13 text-soft mb-4">Your booking is up to date. Any security deposit is refunded after your rental.</p>

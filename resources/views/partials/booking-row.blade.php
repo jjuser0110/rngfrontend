@@ -1,7 +1,6 @@
 {{-- One of the customer's bookings in My Account (read only). Expects $booking (Reservation). --}}
 @php
-    $paidOnline = $booking->status === 'Quote' && $booking->paymentTransactions()->where('status', 'paid')->exists();
-    [$statusLabel, $statusClass] = \App\Support\BookingStatus::meta($booking->status, $paidOnline);
+    [$statusLabel, $statusClass] = \App\Support\BookingStatus::forBooking($booking);
     $placeOf = fn($side) => $booking->{$side . '_location_id'}
         ? ($booking->{$side === 'pickup' ? 'pickupLocation' : 'returnLocation'}->name ?? '')
         : $booking->{$side . '_address'};

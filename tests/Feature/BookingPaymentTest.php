@@ -40,7 +40,7 @@ class BookingPaymentTest extends TestCase
         config(['services.doku' => [
             'enabled' => true, 'client_id' => self::CLIENT_ID, 'secret_key' => self::SECRET,
             'base_url' => 'https://api-sandbox.doku.com', 'currency' => 'MYR', 'due_minutes' => 60,
-            'methods' => [], 'pay_statuses' => ['Quote', 'Open', 'Rental'],
+            'methods' => [], 'pay_statuses' => ['Open', 'Rental'],
         ]]);
         Http::preventStrayRequests();
     }
@@ -211,8 +211,21 @@ class BookingPaymentTest extends TestCase
                 && count($data['order']['line_items']) === 2
                 && $data['order']['line_items'][0]['price'] === 300
                 && $data['order']['line_items'][1]['price'] === 200
-                && $data['additional_info']['override_notification_url'] === route('payments.doku.notify');
+                && $data['additional_info']['override_notification_url'] === route('payments.doku.notify')
+                // DOKU (Malaysia) requires the customer's name, email and phone
+                && $data['customer']['name'] === 'Pay Test'
+                && str_ends_with($data['customer']['email'], '@example.com')
+                && $data['customer']['phone'] === '60123456789';
         });
+    }
+
+    public function test_phone_is_sent_the_way_doku_wants_it(): void
+    {
+        $this->assertSame('60123456789', \App\Payments\BookingPayment::dokuPhone('+60 12-345 6789'));
+        $this->assertSame('60123456789', \App\Payments\BookingPayment::dokuPhone('012-345 6789'));
+        $this->assertSame('6591234567', \App\Payments\BookingPayment::dokuPhone('+65 9123 4567'));
+        $this->assertNull(\App\Payments\BookingPayment::dokuPhone(null));
+        $this->assertSame(16, strlen(\App\Payments\BookingPayment::dokuPhone('+60 12345678901234567')));
     }
 
     public function test_paid_booking_becomes_a_quote_with_two_payments_for_staff(): void
@@ -423,8 +436,31 @@ class BookingPaymentTest extends TestCase
 
     // ---------------------------------------------------------------- balance and car
 
-    public function test_balance_after_staff_raise_the_price(): void
+    public function test_balance_is_collected_by_staff_not_paid_online(): void
     {
+        $user = $this->customerUser();
+        $booking = $this->booking($user, ['status' => 'Open', 'total_price' => 420]);
+        foreach (['Payment' => 300, 'Deposit / Authorization' => 200] as $type => $amount) {
+            Payment::create(['reservation_id' => $booking->id, 'customer_id' => $user->customer_id, 'payment_type' => $type,
+                'payment_method' => 'Online Payment (DOKU)', 'date' => today(), 'amount' => $amount, 'payment_status' => 'Approved']);
+        }
+
+        $this->actingAs($user)->get(route('myaccount.index'))
+            ->assertSee('Balance to pay: RM 120.00')
+            ->assertSee('Please pay at the counter when you pick up your car, or our staff will contact you about payment.')
+            ->assertDontSee('Pay balance');
+        $this->post(route('payments.doku.pay', $booking), ['_token' => csrf_token()]);
+        $this->assertSame(0, PaymentTransaction::where('reservation_id', $booking->id)->count(), 'no online balance payment');
+
+        // Staff record the counter payment
+        Payment::create(['reservation_id' => $booking->id, 'customer_id' => $user->customer_id, 'payment_type' => 'Payment',
+            'payment_method' => 'Cash', 'date' => today(), 'amount' => 120, 'payment_status' => 'Approved']);
+        $this->get(route('myaccount.index'))->assertSee('Fully paid')->assertDontSee('Balance to pay');
+    }
+
+    public function test_balance_after_staff_raise_the_price_when_paying_online_is_on(): void
+    {
+        config(['services.doku.pay_balance_online' => true]);
         $user = $this->customerUser();
         $booking = $this->booking($user, ['status' => 'Open']);
         foreach (['Payment' => 300, 'Deposit / Authorization' => 200] as $type => $amount) {
@@ -482,5 +518,215 @@ class BookingPaymentTest extends TestCase
         $this->assertSame('Pending', Reservation::where('customer_id', $user->customer_id)->value('status'));
 
         $this->post('/payments/doku/notify')->assertNotFound();
+    }
+
+    // ---------------------------------------------------------------- full amount or deposit only
+
+    public function test_details_page_offers_full_amount_or_deposit_only(): void
+    {
+        $this->cartReady($this->customerUser());
+
+        $this->get(route('cars.fillinfo'))->assertOk()
+            ->assertSee('How would you like to pay?')
+            ->assertSee('Pay full amount')
+            ->assertSee('Pay deposit only')
+            ->assertSee('Rental RM 300.00 is paid at the counter when you pick up your car, or our staff will contact you about payment.')
+            ->assertSee('Pay RM 500.00 &amp; Book', false)   // full amount pre-selected
+            ->assertSee('data-button="Pay RM 200.00 &amp; Book"', false)
+            ->assertDontSee('Book now, pay later');
+
+        // The cart shows the full amount, without the choice
+        $this->get(route('cars.cart'))->assertDontSee('How would you like to pay?');
+    }
+
+    public function test_deposit_only_pays_the_deposit_and_leaves_the_rental_for_after_confirmation(): void
+    {
+        $user = $this->customerUser();
+        $this->cartReady($user);
+        $this->fakeDoku();
+
+        $this->post(route('cars.submit'), ['_token' => csrf_token(), 'phone_number' => '+60123456789', 'pay_option' => 'deposit'])
+            ->assertRedirect(self::PAGE);
+
+        $booking = Reservation::where('customer_id', $user->customer_id)->firstOrFail();
+        $transaction = PaymentTransaction::where('reservation_id', $booking->id)->firstOrFail();
+        $this->assertSame(Reservation::STATUS_AWAITING_PAYMENT, $booking->status);
+        $this->assertEquals(200, (float) $transaction->amount);
+        $this->assertEquals(['payment' => 0, 'deposit' => 200], $transaction->payload['parts']);
+        Http::assertSent(function (HttpRequest $request) {
+            $data = json_decode($request->body(), true);
+
+            return $data['order']['amount'] === 200 && count($data['order']['line_items']) === 1
+                && str_contains($data['order']['line_items'][0]['name'], 'deposit');
+        });
+        $this->assertStringContainsString('deposit only', $booking->comments()->value('comment'));
+
+        $this->notify($this->success($transaction))->assertOk();
+        $booking->refresh();
+        $this->assertSame('Quote', $booking->status);
+        $this->assertSame(['Deposit / Authorization'], Payment::where('reservation_id', $booking->id)->pluck('payment_type')->all());
+
+        // The rental is shown as still to pay, collected by staff (not online)
+        $this->get(route('myaccount.index'))
+            ->assertSee('Deposit paid · awaiting confirmation')
+            ->assertSee('Balance to pay: RM 300.00')
+            ->assertSee('at the counter when you pick up your car, or our staff will contact you about payment')
+            ->assertDontSee('Pay balance')->assertDontSee('Fully paid');
+        $this->get(route('cars.confirmed', $booking))->assertSee('Deposit paid')
+            ->assertSee('The rental is paid at the counter when you pick up your car, or our staff will contact you about payment.');
+        $this->post(route('payments.doku.pay', $booking), ['_token' => csrf_token()]);
+        $this->assertSame(1, PaymentTransaction::where('reservation_id', $booking->id)->count(), 'no balance payment online');
+
+        $booking->update(['status' => 'Open']);
+        $this->get(route('myaccount.index'))->assertSee('Balance to pay: RM 300.00')->assertDontSee('Pay balance');
+
+        // Only when paying the balance online is switched on: after staff confirm
+        config(['services.doku.pay_balance_online' => true]);
+        $this->get(route('myaccount.index'))->assertSee('Pay balance RM 300.00');
+        $balance = $this->startPayment($user, $booking);
+        $this->assertEquals(300, (float) $balance->amount);
+        $this->assertEquals(['payment' => 300, 'deposit' => 0], $balance->payload['parts']);
+    }
+
+    public function test_full_payment_stays_paid_when_staff_raise_the_price_before_confirming(): void
+    {
+        $user = $this->customerUser();
+        $booking = $this->booking($user);
+        $this->notify($this->success($this->startPayment($user, $booking)))->assertOk();
+
+        $booking->refresh()->update(['total_price' => 420]);
+        $this->get(route('myaccount.index'))
+            ->assertSee('Paid · awaiting confirmation')->assertDontSee('Deposit paid')
+            ->assertSee('Balance to pay: RM 120.00')->assertDontSee('Pay balance');
+    }
+
+    /** A customer staff created without an email (login without one too). */
+    private function userWithoutEmail(array $extra = []): User
+    {
+        $user = $this->customerUser(['email' => null] + $extra);
+        $user->forceFill(['email' => null])->save();
+
+        return $user->fresh();
+    }
+
+    public function test_customer_without_email_must_add_it_to_pay_online(): void
+    {
+        $user = $this->userWithoutEmail();
+        $taken = $this->customerUser()->email;
+        $this->cartReady($user);
+        $this->fakeDoku();
+        $send = fn (array $extra) => $this->post(route('cars.submit'), $extra + ['_token' => csrf_token(), 'phone_number' => '+60123456789']);
+
+        $this->get(route('cars.fillinfo'))->assertOk()->assertSee('name="email"', false);
+        $send([])->assertSessionHasErrors('email');
+        $send(['email' => 'not-an-email'])->assertSessionHasErrors('email');
+        $send(['email' => $taken])->assertSessionHasErrors('email');
+        $send(['pay_option' => 'deposit'])->assertSessionHasErrors('email');
+        $this->assertSame(0, Reservation::where('customer_id', $user->customer_id)->count());
+
+        $email = 'zznew' . uniqid() . '@example.com';
+        $send(['email' => $email])->assertRedirect(self::PAGE);
+        $this->assertSame($email, Customer::find($user->customer_id)->email);
+        $this->assertSame($email, $user->fresh()->email);
+        Http::assertSent(fn (HttpRequest $request) => json_decode($request->body(), true)['customer']['email'] === $email);
+    }
+
+    public function test_a_customer_with_an_email_cannot_change_it_when_booking(): void
+    {
+        $user = $this->customerUser();
+        $this->cartReady($user);
+        $this->fakeDoku();
+
+        $this->get(route('cars.fillinfo'))->assertDontSee('name="email"', false)->assertSee($user->email);
+        $this->post(route('cars.submit'), ['_token' => csrf_token(), 'phone_number' => '+60123456789', 'email' => 'other@example.com'])->assertRedirect(self::PAGE);
+        $this->assertSame($user->email, Customer::find($user->customer_id)->email);
+    }
+
+    public function test_book_now_pay_later_does_not_need_an_email(): void
+    {
+        $user = $this->userWithoutEmail(['deposit_required' => false]);
+        $this->cartReady($user);
+
+        $this->post(route('cars.submit'), ['_token' => csrf_token(), 'phone_number' => '+60123456789', 'pay_option' => 'deposit', 'email' => ''])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Quote', Reservation::where('customer_id', $user->customer_id)->value('status'));
+    }
+
+    public function test_unpaid_booking_without_email_asks_for_it_before_paying(): void
+    {
+        $user = $this->userWithoutEmail();
+        $booking = $this->booking($user);
+        $this->fakeDoku();
+
+        $this->actingAs($user)->get(route('cars.confirmed', $booking))->assertSee('Your email (required)');
+        $this->post(route('payments.doku.pay', $booking), ['_token' => csrf_token()])->assertSessionHas('payment_error');
+        Http::assertNothingSent();
+
+        $email = 'zznew' . uniqid() . '@example.com';
+        $this->post(route('payments.doku.pay', $booking), ['_token' => csrf_token(), 'email' => $email])->assertRedirect(self::PAGE);
+        $this->assertSame($email, Customer::find($user->customer_id)->email);
+        Http::assertSent(fn (HttpRequest $request) => json_decode($request->body(), true)['customer']['email'] === $email);
+    }
+
+    public function test_unpaid_booking_can_still_be_paid_in_full_or_deposit_only(): void
+    {
+        $user = $this->customerUser();
+        $booking = $this->booking($user);
+
+        $this->actingAs($user)->get(route('myaccount.index'))
+            ->assertSee('Pay RM 500.00 to complete booking')
+            ->assertSee('Pay deposit only RM 200.00');
+
+        $this->fakeDoku();
+        $this->post(route('payments.doku.pay', $booking), ['_token' => csrf_token(), 'pay_option' => 'deposit'])->assertRedirect(self::PAGE);
+        $this->assertEquals(200, (float) PaymentTransaction::where('reservation_id', $booking->id)->latest('id')->value('amount'));
+    }
+
+    public function test_customer_without_deposit_can_book_now_and_pay_later(): void
+    {
+        $user = $this->customerUser(['deposit_required' => false]);
+        $this->cartReady($user);
+        $this->fakeDoku();
+
+        $this->get(route('cars.fillinfo'))
+            ->assertSee('Book now, pay later')
+            ->assertSee('Nothing to pay now')
+            ->assertDontSee('Pay deposit only');
+
+        $this->post(route('cars.submit'), ['_token' => csrf_token(), 'phone_number' => '+60123456789', 'pay_option' => 'deposit']);
+
+        $booking = Reservation::where('customer_id', $user->customer_id)->firstOrFail();
+        Http::assertNothingSent();
+        $this->assertSame('Quote', $booking->status);
+        $this->assertNotEmpty($booking->quotation_no);
+        $this->assertSame(0, Payment::where('reservation_id', $booking->id)->count());
+        $marker = PaymentTransaction::where('reservation_id', $booking->id)->sole();
+        $this->assertSame(['website', 'pay_later', 0.0], [$marker->gateway, $marker->status, (float) $marker->amount]);
+        $this->assertStringContainsString('pay later', $booking->comments()->value('comment'));
+
+        $this->get(route('cars.confirmed', $booking))->assertOk()->assertSee('Booking received')->assertDontSee('Complete your payment');
+        $this->get(route('myaccount.index'))
+            ->assertSee('Booked · awaiting confirmation')
+            ->assertSee('Balance to pay: RM 300.00')
+            ->assertDontSee('Pay balance');
+        $this->get(route('cars.confirmed', $booking))->assertSee('Nothing to pay now: pay at the counter when you pick up your car, or our staff will contact you about payment.');
+
+        $booking->update(['status' => 'Open']);
+        $this->get(route('myaccount.index'))->assertSee('Balance to pay: RM 300.00')->assertDontSee('Pay balance');
+    }
+
+    public function test_full_amount_is_the_default_and_the_only_option_when_switched_off(): void
+    {
+        config(['services.doku.allow_deposit_only' => false]);
+        $user = $this->customerUser();
+        $this->cartReady($user);
+        $this->fakeDoku();
+
+        $this->get(route('cars.fillinfo'))->assertDontSee('How would you like to pay?')->assertSee('Pay RM 500.00 &amp; Book', false);
+        // A sent "deposit" is ignored: the full amount is charged
+        $this->post(route('cars.submit'), ['_token' => csrf_token(), 'phone_number' => '+60123456789', 'pay_option' => 'deposit']);
+        $booking = Reservation::where('customer_id', $user->customer_id)->firstOrFail();
+        $this->assertEquals(500, (float) PaymentTransaction::where('reservation_id', $booking->id)->value('amount'));
+        $this->get(route('myaccount.index'))->assertDontSee('Pay deposit only');
     }
 }

@@ -8,9 +8,13 @@
         // Never paid, and its pick-up time is gone: it can't be paid any more
         $tooLateToPay = $awaitingPayment && \App\Payments\BookingPayment::pickupPassed($reservation);
         $paidOnline = $reservation->paymentTransactions()->where('status', 'paid')->exists();
+        // Website Quote waiting for staff: 'paid' (full), 'deposit' (deposit only) or 'pay_later' (nothing paid)
+        $quoteKind = \App\Payments\BookingPayment::websiteQuoteKind($reservation);
         [$pageTitle, $pageLead] = match (true) {
             $tooLateToPay    => ['Not Paid', 'This booking was not paid before its pick-up time'],
             $awaitingPayment => ['Complete Your Payment', 'Your booking is waiting for payment'],
+            $quoteKind === 'deposit'   => ['Deposit Paid', "We've received your booking and deposit"],
+            $quoteKind === 'pay_later' => ['Booking Received', "We've received your booking"],
             $paidOnline      => ['Booking Paid', "We've received your booking and payment"],
             default          => ['Request Sent', "We've received your booking request"],
         };
@@ -36,6 +40,10 @@
     }
     $image = $vehicleModel ? $vehicleModel->getFirstMedia('attachments') : null;
     $imageUrl = $image ? $image->getUrl() : asset('images/cars/jeep-renegade.jpg');
+    if (!$isConfirmed) {
+        // Pay full amount / deposit only (the choice is in the summary; the Pay buttons follow it)
+        ['selected' => $payOption, 'options' => $payOptions] = \App\Support\PayOptions::for($quote);
+    }
 @endphp
 
 <div class="no-bottom no-top listing-page booking-page pb-5 mb-5" id="content">
@@ -73,8 +81,8 @@
                     $whatsappLink = \App\Support\WhatsApp::link("Hi, I have a question about my booking request {$reservation->code}.");
                     // Staff confirm the price in rngcarrental (Quote); until then the total is the website's estimate
                     $isPending = $reservation->status === 'Pending';
-                    [$statusLabel] = \App\Support\BookingStatus::meta($reservation->status, $paidOnline);
-                    $nextSteps = ($payOnline || $paidOnline) ? [
+                    [$statusLabel] = \App\Support\BookingStatus::forBooking($reservation);
+                    $nextSteps = ($payOnline || $paidOnline || $quoteKind) ? [
                         ['fa-search', 'We confirm your booking', 'Our team checks your payment and details, confirms your booking and assigns your car. You can see your car in My Account.'],
                         ['fa-whatsapp', 'We contact you if needed', "If you asked for a driver, or your car model isn't available, we'll contact you by WhatsApp or phone."],
                         ['fa-id-card-o', 'Pick up your car', 'Bring your IC or passport and driving licence on the pick-up day.'],
@@ -97,6 +105,14 @@
                         <p class="fs-14 text-soft mb-3">Your booking is saved but not paid yet. We only confirm it and keep a car for you once it is paid.</p>
                         <div class="d-flex justify-content-center">@include('payments.payment-box', ['reservation' => $reservation])</div>
                         <div class="mt-2 mb-3">@include('payments.remove-booking', ['reservation' => $reservation])</div>
+                    @elseif ($quoteKind === 'deposit')
+                        <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
+                        <h2 class="fw-bold fs-24 text-ink mb-2">Deposit paid</h2>
+                        <p class="fs-14 text-soft mb-3">Thank you, {{ $customer->first_name ?? 'we\'ve got it' }}! Our team will check and confirm your booking. The rental is paid at the counter when you pick up your car, or our staff will contact you about payment.</p>
+                    @elseif ($quoteKind === 'pay_later')
+                        <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
+                        <h2 class="fw-bold fs-24 text-ink mb-2">Booking received</h2>
+                        <p class="fs-14 text-soft mb-3">Thank you, {{ $customer->first_name ?? 'we\'ve got it' }}! Our team will check and confirm your booking. Nothing to pay now: pay at the counter when you pick up your car, or our staff will contact you about payment.</p>
                     @elseif ($paidOnline && $reservation->status === 'Quote')
                         <div class="sent-check mx-auto mb-3"><i class="fa fa-check" aria-hidden="true"></i></div>
                         <h2 class="fw-bold fs-24 text-ink mb-2">Booking paid</h2>
@@ -228,7 +244,7 @@
 
             @else
 
-                <form action="{{ route('cars.submit') }}" method="POST" id="detailsForm" onsubmit="return window.validateDetails ? window.validateDetails() : true">
+                <form action="{{ route('cars.submit') }}" method="POST" id="detailsForm" novalidate onsubmit="return window.validateDetails ? window.validateDetails() : true">
                     @csrf
                     <div class="row g-4">
 
@@ -257,8 +273,16 @@
                                         <div class="form-control fs-13 py-2 bg-light text-break" style="border-color: #dee2e6;">{{ $customer->full_name }}</div>
                                     </div>
                                     <div class="col-sm-6">
+                                        @if ($payOnline && !$customer->email)
+                                            {{-- Online payment needs an email; saved to the customer. Optional with "Book now, pay later" --}}
+                                            @php $emailRequired = $payOptions[$payOption]['amount'] > 0; @endphp
+                                            <label class="form-label small fw-bold text-uppercase fs-12 mb-1" for="email" style="color: #33383c;">Email Address <span class="text-danger js-email-star {{ $emailRequired ? '' : 'd-none' }}">*</span></label>
+                                            <input type="email" name="email" id="email" class="form-control fs-13 py-2 @error('email') is-invalid @enderror" value="{{ old('email', auth()->user()->email) }}" maxlength="255" placeholder="you@example.com" style="border-color: #dee2e6;" @required($emailRequired)>
+                                            <div class="invalid-feedback" id="email-error">@error('email') {{ $message }} @enderror</div>
+                                        @else
                                         <span class="form-label small fw-bold text-uppercase fs-12 mb-1 d-block" style="color: #33383c;">Email Address</span>
-                                        <div class="form-control fs-13 py-2 bg-light text-break" style="border-color: #dee2e6;">{{ $customer->email }}</div>
+                                        <div class="form-control fs-13 py-2 bg-light text-break" style="border-color: #dee2e6;">@if ($customer->email){{ $customer->email }}@else<span class="text-muted">No email added</span>@endif</div>
+                                        @endif
                                     </div>
                                     <div class="col-sm-6">
                                         <label class="form-label small fw-bold text-uppercase fs-12 mb-1" for="phone_number_display" style="color: #33383c;">Phone Number / WhatsApp <span class="text-danger">*</span></label>
@@ -300,12 +324,13 @@
                                     <span class="bg-light border px-2 py-1 fs-11 rounded-1 fw-semibold flex-shrink-0" style="color: #495057; border-color: #dee2e6 !important;"><i class="fa fa-file-invoice me-1" style="color: #e9993e;"></i> {{ $payOnline ? 'Pay now' : 'Estimate' }}</span>
                                 </div>
 
-                                @include('cars.partials.summary')
+                                @include('cars.partials.summary', ['withPayOptions' => true])
 
                                 @unless ($licenceExpired)
                                     <button type="submit" class="js-send-request btn btn-dark w-100 text-center border-0 py-3 mt-4 rounded-2 text-uppercase fw-semibold fs-12 tracking-wide shadow-sm text-white d-none d-xl-flex align-items-center justify-content-center gap-2">
                                         @if ($payOnline)
-                                            <span>Pay RM {{ number_format($quote['total'] + $quote['security_deposit'], 2) }} &amp; Book</span> <i class="fa fa-lock"></i>
+                                            {{-- Follows the pay option chosen in the summary (payOptions / payOption) --}}
+                                            <span class="js-label-desktop">{{ $payOptions[$payOption]['button'] }}</span> <i class="fa {{ $payOptions[$payOption]['icon'] }} js-label-icon"></i>
                                         @else
                                             <span>Send Booking Request</span> <i class="fa fa-paper-plane"></i>
                                         @endif
@@ -327,14 +352,14 @@
 <div class="d-xl-none fixed-bottom bg-white border-top shadow-lg p-3 d-flex align-items-center justify-content-between gap-3" style="z-index: 1050;">
     <div class="min-w-0">
         <span class="text-uppercase fs-10 fw-bold tracking-wider d-block text-truncate" style="color: #6c757d;">{{ $payOnline ? 'To pay now' : 'Estimated Total' }}</span>
-        <div class="fw-bold fs-18 text-truncate" style="color: #33383c;">RM {{ number_format($quote['total'] + ($payOnline ? $quote['security_deposit'] : 0), 2) }}</div>
+        <div class="fw-bold fs-18 text-truncate js-pay-now" style="color: #33383c;">RM {{ number_format($payOnline ? $payOptions[$payOption]['amount'] : $quote['total'], 2) }}</div>
     </div>
     @if ($licenceExpired)
         <a href="{{ route('myaccount.index') }}" class="btn btn-danger px-3 py-2 text-uppercase fw-semibold fs-12 rounded-2 shadow-sm flex-shrink-0 text-nowrap">Update licence</a>
     @else
         <button type="submit" form="detailsForm" class="js-send-request btn px-3 px-md-4 py-2 text-uppercase fw-semibold fs-12 text-white rounded-2 shadow-sm flex-shrink-0 text-nowrap" style="background-color: #e9993e; border-color: #e9993e;">
             @if ($payOnline)
-                <span>Pay &amp; Book</span> <i class="fa fa-lock"></i>
+                <span class="js-label-mobile">{{ $payOptions[$payOption]['mobile'] }}</span> <i class="fa {{ $payOptions[$payOption]['icon'] }} js-label-icon"></i>
             @else
                 <span>Send Request</span> <i class="fa fa-paper-plane"></i>
             @endif
@@ -456,12 +481,32 @@
     $(function () {
         const phone = initPhoneInput('#phone_number_display', '#phone_number', '#phone_number-error');
 
+        $('#email').on('input', function () { $(this).removeClass('is-invalid'); });
+
+        // Pay full amount / deposit only: the amount and the buttons follow the choice
+        $('.js-pay-option').on('change', function () {
+            const option = $(this).data();
+            $('.js-pay-now').text(option.amount);
+            $('.js-label-desktop').text(option.button);
+            $('.js-label-mobile').text(option.mobile);
+            $('.js-label-icon').removeClass('fa-lock fa-paper-plane').addClass(option.icon);
+            $('#email').prop('required', !!option.needsEmail).removeClass('is-invalid');
+            $('.js-email-star').toggleClass('d-none', !option.needsEmail);
+        });
+
         // Block sending with an invalid phone number (the server checks again)
         window.validateDetails = function () {
             const error = phone.validate();
             if (error) {
                 phone.setError(error);
                 $('#phone_number_display').trigger('focus');
+                return false;
+            }
+            // Only there when the customer has no email yet
+            const email = document.getElementById('email');
+            if (email && !email.checkValidity()) {
+                $('#email-error').text(email.value.trim() ? 'Please enter a valid email address.' : 'Please enter your email. It is needed for online payment.');
+                $(email).addClass('is-invalid').trigger('focus');
                 return false;
             }
             // Send once: lock both Send buttons until the page changes

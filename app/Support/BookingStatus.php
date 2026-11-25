@@ -29,4 +29,15 @@ class BookingStatus
 
         return self::STATUSES[$status] ?? [$status ?: 'Unknown', 'status-completed'];
     }
+
+    /** [label, css class] for one booking: a website Quote waiting for staff says how it was booked. */
+    public static function forBooking(Reservation $reservation): array
+    {
+        return match (\App\Payments\BookingPayment::websiteQuoteKind($reservation)) {
+            'paid'      => ['Paid · awaiting confirmation', 'status-quote'],
+            'deposit'   => ['Deposit paid · awaiting confirmation', 'status-quote'],
+            'pay_later' => ['Booked · awaiting confirmation', 'status-quote'],
+            default     => self::meta($reservation->status),
+        };
+    }
 }
